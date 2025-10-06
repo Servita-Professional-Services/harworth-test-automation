@@ -4,8 +4,8 @@ import dotenv from 'dotenv';
 // Load env from .env (override by setting ENV_FILE if you want a custom path)
 dotenv.config({ path: process.env.ENV_FILE || '.env' });
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/api';
+const BASE_URL = process.env.BASE_URL || 'https://agreeable-desert-018cccd03.6.azurestaticapps.net/';
+const API_BASE_URL = process.env.API_BASE_URL || 'https://harworth-portal-api-service-dev.azurewebsites.net';
 
 export default defineConfig({
   // ---- Where tests live
