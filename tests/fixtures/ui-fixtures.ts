@@ -1,8 +1,6 @@
-// tests/fixtures/ui-fixtures.ts
 import { test as base } from '@playwright/test';
-import { PortalWelcome } from '../../../src/pages/welcome'; 
-import { PortalLogin } from '../../../src/pages/login'; 
-
+import { PortalWelcome } from '../../src/pages/welcome'; 
+import { PortalLogin } from '../../src/pages/login'; 
 type Fixtures = {
   portalWelcome: PortalWelcome;
   portalLogin: PortalLogin; 

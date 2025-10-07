@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/ui-fixtures'; 
+import { test, expect } from '../fixtures/ui-fixtures'; 
 import { PortalLogin } from '../../src/pages/login';
 
 const email = process.env.DEV_PORTAL_LOGIN_EMAIL as string;
