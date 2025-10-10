@@ -26,7 +26,7 @@ export class SchemesClient {
   async create(payload: CreateScheme): Promise<Scheme> {
     const res = await this.api.post('/schemes', { data: payload });
     await this.ensureOk(res, 'create scheme', [201, 200]);
-    return res.json(); 
+    return res.json();
   }
 
   async update(id: number | string, payload: UpdateScheme): Promise<Scheme> {
