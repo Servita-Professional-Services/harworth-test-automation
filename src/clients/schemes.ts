@@ -7,12 +7,19 @@ export type Scheme = {
   imported?: boolean;
 };
 
+// Server accepts `imported` on create (optional boolean)
 export type CreateScheme = {
   display_name: string;
   description: string;
+  imported?: boolean;
 };
 
-export type UpdateScheme = Partial<CreateScheme>;
+// Server allows nulls on update per Joi (display_name/description/imported)
+export type UpdateScheme = {
+  display_name?: string | null;
+  description?: string | null;
+  imported?: boolean | null;
+};
 
 export class SchemesClient {
   constructor(private readonly api: APIRequestContext) {}
@@ -26,20 +33,21 @@ export class SchemesClient {
   async create(payload: CreateScheme): Promise<Scheme> {
     const res = await this.api.post('/schemes', { data: payload });
     await this.ensureOk(res, 'create scheme', [201, 200]);
-    return res.json();
+    return res.json(); // expects { id, display_name, description, imported? }
   }
 
   async update(id: number | string, payload: UpdateScheme): Promise<Scheme> {
     const res = await this.api.put(`/schemes/${id}`, { data: payload });
     await this.ensureOk(res, 'update scheme', [200]);
-    return res.json();
+    return res.json(); // updated object
   }
 
   async delete(id: number | string): Promise<void> {
     const res = await this.api.delete(`/schemes/${id}`);
-    await this.ensureOk(res, 'delete scheme', [204]);
+    await this.ensureOk(res, 'delete scheme', [204]); // No Content
   }
 
+  // --- helpers ---
   private async ensureOk(res: APIResponse, action: string, okStatuses: number[]) {
     if (okStatuses.includes(res.status())) return;
     const body = await res.text().catch(() => '');
