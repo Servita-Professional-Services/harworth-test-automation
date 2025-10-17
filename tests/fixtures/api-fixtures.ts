@@ -1,37 +1,33 @@
-import { test as base, request, APIRequestContext } from '@playwright/test';
-import { SchemesClient } from '../../src/clients/schemes'; 
+import { test as base, expect, request, APIRequestContext } from '@playwright/test';
 import { SitesClient } from '../../src/clients/sites'; 
-import { LookupsClient } from '../../src/clients/lookups'; 
-import { UsersClient } from '../../src/clients/users'; 
+import { SchemesClient } from '../../src/clients/schemes'; 
 
-type Fixtures = {
-  api: APIRequestContext;
-  schemes: SchemesClient;
-  sites: SitesClient;
-  lookups: LookupsClient;
-  users: UsersClient;
+type Lookups = {
+  landUses: () => Promise<Array<{ id: number }>>;
+  statuses: () => Promise<Array<{ id: number }>>;
 };
 
-export const test = base.extend<Fixtures>({
-  api: async ({}, use) => {
-    const baseURL = process.env.DEV_API_BASE_URL;
-    const token = process.env.DEV_API_AUTH_TOKEN;
-    if (!baseURL) throw new Error('DEV_API_BASE_URL is not set');
-    if (!token) throw new Error('DEV_API_AUTH_TOKEN is not set');
+type ApiFixtures = {
+  api: APIRequestContext;
+  sites: SitesClient;
+  schemes: SchemesClient;
+  lookups: Lookups;
+};
 
+const API_BASE_URL = process.env.DEV_API_BASE_URL as string;
+const API_TOKEN = process.env.DEV_API_AUTH_TOKEN as string;
+
+export const test = base.extend<ApiFixtures>({
+  api: async ({}, use) => {
     const api = await request.newContext({
-      baseURL,
+      baseURL: API_BASE_URL,
       extraHTTPHeaders: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
+        Authorization: `Bearer ${API_TOKEN}`,
+        'Content-Type': 'application/json',
       },
     });
-
-    try {
-      await use(api);
-    } finally {
-      await api.dispose();
-    }
+    await use(api);
+    await api.dispose();
   },
 
   schemes: async ({ api }, use) => {
@@ -43,12 +39,20 @@ export const test = base.extend<Fixtures>({
   },
 
   lookups: async ({ api }, use) => {
-    await use(new LookupsClient(api));
-  },
-
-  users: async ({ api }, use) => {
-    await use(new UsersClient(api));
+    const lookups: Lookups = {
+      landUses: async () => {
+        const res = await api.get('/lookups/land-uses');
+        expect(res.status(), 'GET /lookups/land-uses').toBe(200);
+        return (await res.json()) as Array<{ id: number }>;
+      },
+      statuses: async () => {
+        const res = await api.get('/lookups/statuses');
+        expect(res.status(), 'GET /lookups/statuses').toBe(200);
+        return (await res.json()) as Array<{ id: number }>;
+      },
+    };
+    await use(lookups);
   },
 });
 
-export const expect = base.expect;
+export { expect };

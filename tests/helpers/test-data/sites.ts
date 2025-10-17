@@ -9,6 +9,7 @@ export const makeSiteCreatePayload = (opts: CreateSiteInput = {}): CreateSite =>
     financial_code:
       opts.financial_code ??
       `FIN_${generateRandomString(4).toUpperCase()}${Math.floor(Math.random() * 90 + 10)}`,
+    status_id: opts.status_id ?? '3',
     address: opts.address ?? '123 Test Street',
     post_code: opts.post_code ?? 'LS79 7TP',
     comment: opts.comment ?? 'E2E test site',
