@@ -3,7 +3,6 @@ import type { APIRequestContext, APIResponse } from '@playwright/test';
 export type Scheme = {
   id: number | string;
   display_name?: string;
-  displayName?: string;
   description?: string;
   imported?: boolean;
 };
