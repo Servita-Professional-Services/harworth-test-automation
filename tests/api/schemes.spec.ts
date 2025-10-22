@@ -1,5 +1,11 @@
 import { test, expect } from '../fixtures/api-fixtures';
-import { makeSchemePayload } from '../helpers/test-data/schemes'; 
+import { makeSchemePayload } from '../helpers/test-data/schemes';
+import {
+  expectIdsContain,
+  expectIdsNotContain,
+  expectAtMostN,
+  INVALID_ID_CASES,
+} from '../helpers/assertions';
 
 // ---------------------------
 // Query validation & filtering (schemesQueryValidation)
@@ -13,7 +19,7 @@ test.describe('@api Schemes validation & filtering', () => {
       created = await schemes.create(payload);
       const rows = await schemes.list();
       expect(Array.isArray(rows)).toBe(true);
-      expect(rows.map(r => String(r.id))).toContain(String(created.id));
+      expectIdsContain(rows, created.id);
     } finally {
       if (created) await schemes.delete(created.id);
     }
@@ -24,8 +30,8 @@ test.describe('@api Schemes validation & filtering', () => {
     const b = await schemes.create({ display_name: `e2e-${Date.now()}-B`, description: 'desc B' });
     try {
       const rows = await schemes.list({ display_name: a.display_name ?? (a as any).displayName });
-      expect(rows.map(r => String(r.id))).toContain(String(a.id));
-      expect(rows.map(r => String(r.id))).not.toContain(String(b.id));
+      expectIdsContain(rows, a.id);
+      expectIdsNotContain(rows, b.id);
     } finally {
       await schemes.delete(a.id);
       await schemes.delete(b.id);
@@ -37,9 +43,7 @@ test.describe('@api Schemes validation & filtering', () => {
     const s2 = await schemes.create({ display_name: `e2e-${Date.now()}-2`, description: 'd2' });
     try {
       const rows = await schemes.listByIds([s1.id, s2.id]);
-      const got = new Set(rows.map(r => String(r.id)));
-      expect(got.has(String(s1.id))).toBe(true);
-      expect(got.has(String(s2.id))).toBe(true);
+      expectIdsContain(rows, s1.id, s2.id);
     } finally {
       await schemes.delete(s1.id);
       await schemes.delete(s2.id);
@@ -49,7 +53,7 @@ test.describe('@api Schemes validation & filtering', () => {
   test('Supports pagination with valid parameters', async ({ schemes }) => {
     const rows = await schemes.list({ page: 1, limit: 1 });
     expect(Array.isArray(rows)).toBe(true);
-    expect(rows.length).toBeLessThanOrEqual(1);
+    expectAtMostN(rows, 1);
   });
 
   const invalidPaginations = [
@@ -99,8 +103,9 @@ test.describe('@api Schemes create validations', () => {
       expect(created.id).toBeDefined();
       expect(created.display_name ?? (created as any).displayName).toBe(payload.display_name);
       expect(created.description).toBe(payload.description);
+
       const all = await schemes.listByIds([created.id]);
-      expect(all.map(s => String(s.id))).toContain(String(created.id));
+      expectIdsContain(all, created.id);
     } finally {
       if (created) await schemes.delete(created.id);
     }
@@ -164,12 +169,10 @@ test.describe('@api Schemes delete & params', () => {
     const s = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
     await schemes.delete(s.id);
     const rows = await schemes.listByIds([s.id]);
-    expect(rows.some(r => String(r.id) === String(s.id))).toBe(false);
+    expectIdsNotContain(rows, s.id);
   });
 
-  const invalidIds = [-1, 0, 1.5, 'foo'] as const;
-
-  for (const bad of invalidIds) {
+  for (const bad of INVALID_ID_CASES) {
     test(`GET /schemes invalid id (400) — ${String(bad)}`, async ({ api }) => {
       const res = await api.get(`/schemes/${String(bad)}`);
       expect(res.status()).toBe(400);
@@ -202,8 +205,7 @@ test.describe('@api Schemes history validation', () => {
     }
   });
 
-  const invalidIds = [-1, 0, 1.5, 'foo'] as const;
-  for (const bad of invalidIds) {
+  for (const bad of INVALID_ID_CASES) {
     test(`GET /schemes/:id/history invalid id (400) — ${String(bad)}`, async ({ api }) => {
       const res = await api.get(`/schemes/${String(bad)}/history`);
       expect(res.status()).toBe(400);

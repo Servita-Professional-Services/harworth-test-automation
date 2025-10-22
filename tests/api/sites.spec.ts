@@ -1,11 +1,16 @@
+// tests/api/sites.spec.ts
 import { test, expect } from '../fixtures/api-fixtures';
-import { makeSchemePayload } from '../helpers/test-data/schemes'; 
-import { makeSiteCreatePayload } from '../helpers/test-data/sites'; 
+import { makeSchemePayload } from '../helpers/test-data/schemes';
+import { makeSiteCreatePayload } from '../helpers/test-data/sites';
+import {
+  expectIdsContain,
+  expectAtMostN,
+  INVALID_ID_CASES,
+} from '../helpers/assertions';
 
 // ---------------------------
 // Query validation & filtering (sitesQueryValidation)
 // ---------------------------
-
 test.describe('@api Sites validation & filtering', () => {
   test('Filters by display_name returns matching site', async ({ sites, schemes }) => {
     const scheme = await schemes.create(makeSchemePayload());
@@ -15,13 +20,8 @@ test.describe('@api Sites validation & filtering', () => {
       const s1 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), display_name: nameA }));
       const s2 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), display_name: nameB }));
       try {
-        const rows = await sites.list({
-          display_name: nameA,
-          phase: 'opportunity',
-          page: 1,
-          limit: 50,
-        });
-        expect(rows.map(r => String(r.id))).toContain(String(s1.id));
+        const rows = await sites.list({ display_name: nameA, phase: 'opportunity', page: 1, limit: 50 });
+        expectIdsContain(rows, s1.id);
       } finally {
         await sites.delete(s1.id);
         await sites.delete(s2.id);
@@ -39,13 +39,8 @@ test.describe('@api Sites validation & filtering', () => {
       s1 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(parent.id) }));
       s2 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(other.id) }));
 
-      const rows = await sites.list({
-        scheme_id: Number(parent.id),
-        phase: 'opportunity',
-        page: 1,
-        limit: 50,
-      });
-      expect(rows.map(r => String(r.id))).toContain(String(s1.id));
+      const rows = await sites.list({ scheme_id: Number(parent.id), phase: 'opportunity', page: 1, limit: 50 });
+      expectIdsContain(rows, s1.id);
     } finally {
       if (s1) await sites.delete(s1.id);
       if (s2) await sites.delete(s2.id);
@@ -59,17 +54,10 @@ test.describe('@api Sites validation & filtering', () => {
     let created: any;
     try {
       const finCode = `FIN_${Date.now()}`;
-      created = await sites.create(
-        makeSiteCreatePayload({ scheme_id: Number(scheme.id), financial_code: finCode })
-      );
+      created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), financial_code: finCode }));
 
-      const rows = await sites.list({
-        financial_code: finCode,
-        phase: 'opportunity',
-        page: 1,
-        limit: 50,
-      });
-      expect(rows.map(r => String(r.id))).toContain(String(created.id));
+      const rows = await sites.list({ financial_code: finCode, phase: 'opportunity', page: 1, limit: 50 });
+      expectIdsContain(rows, created.id);
     } finally {
       if (created) await sites.delete(created.id);
       await schemes.delete(scheme.id);
@@ -83,17 +71,10 @@ test.describe('@api Sites validation & filtering', () => {
       const landUses = await lookups.landUses();
       const land_use_id = landUses[0]?.id != null ? Number(landUses[0].id) : undefined;
 
-      created = await sites.create(
-        makeSiteCreatePayload({ scheme_id: Number(scheme.id), land_use_id })
-      );
+      created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), land_use_id }));
 
-      const rows = await sites.list({
-        land_use_id,
-        phase: 'opportunity',
-        page: 1,
-        limit: 50,
-      });
-      expect(rows.map(r => String(r.id))).toContain(String(created.id));
+      const rows = await sites.list({ land_use_id, phase: 'opportunity', page: 1, limit: 50 });
+      expectIdsContain(rows, created.id);
     } finally {
       if (created) await sites.delete(created.id);
       await schemes.delete(scheme.id);
@@ -107,15 +88,8 @@ test.describe('@api Sites validation & filtering', () => {
       a = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
       b = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
 
-      const rows = await sites.listByIds([a.id, b.id], {
-        scheme_id: Number(scheme.id),
-        phase: 'opportunity',
-        page: 1,
-        limit: 50,
-      });
-      const got = new Set(rows.map(r => String(r.id)));
-      expect(got.has(String(a.id))).toBe(true);
-      expect(got.has(String(b.id))).toBe(true);
+      const rows = await sites.listByIds([a.id, b.id], { scheme_id: Number(scheme.id), phase: 'opportunity', page: 1, limit: 50 });
+      expectIdsContain(rows, a.id, b.id);
     } finally {
       if (a) await sites.delete(a.id);
       if (b) await sites.delete(b.id);
@@ -143,7 +117,7 @@ test.describe('@api Sites validation & filtering', () => {
   test('Paginates with valid params', async ({ sites }) => {
     const rows = await sites.list({ page: 1, limit: 1, phase: 'opportunity' });
     expect(Array.isArray(rows)).toBe(true);
-    expect(rows.length).toBeLessThanOrEqual(1);
+    expectAtMostN(rows, 1);
   });
 
   const invalidPaginations = [
@@ -164,7 +138,6 @@ test.describe('@api Sites validation & filtering', () => {
 // ---------------------------
 // Create body validation (siteCreateBodyValidation)
 // ---------------------------
-
 test.describe('@api Sites create validation', () => {
   const invalidCreates = [
     { name: 'missing display_name', body: { description: 'x' } },
@@ -203,7 +176,6 @@ test.describe('@api Sites create validation', () => {
 // ---------------------------
 // Update body validation (siteUpdateBodyValidation)
 // ---------------------------
-
 test.describe('@api Sites update validation', () => {
   const nullableFields = [
     'display_name',
@@ -274,11 +246,8 @@ test.describe('@api Sites update validation', () => {
 // ---------------------------
 // Param validation for site id (get/update/delete/history)
 // ---------------------------
-
 test.describe('@api Sites param validation', () => {
-  const invalidIds = [-1, 0, 1.5, 'foo'] as const;
-
-  for (const bad of invalidIds) {
+  for (const bad of INVALID_ID_CASES) {
     test(`GET /sites invalid id (400) — ${String(bad)}`, async ({ api }) => {
       const res = await api.get(`/sites/${String(bad)}`);
       expect(res.status()).toBe(400);
@@ -299,7 +268,6 @@ test.describe('@api Sites param validation', () => {
 // ---------------------------
 // History endpoint (params + pagination)
 // ---------------------------
-
 test.describe('@api Sites history validation', () => {
   test('History returns data for valid id (may be empty)', async ({ sites, schemes }) => {
     const scheme = await schemes.create(makeSchemePayload());
@@ -313,8 +281,7 @@ test.describe('@api Sites history validation', () => {
     }
   });
 
-  const invalidIds = [-1, 0, 1.5, 'foo'] as const;
-  for (const bad of invalidIds) {
+  for (const bad of INVALID_ID_CASES) {
     test(`GET /sites/:id/history invalid id (400) — ${String(bad)}`, async ({ api }) => {
       const res = await api.get(`/sites/${String(bad)}/history`);
       expect(res.status()).toBe(400);
@@ -340,7 +307,6 @@ test.describe('@api Sites history validation', () => {
 // ---------------------------
 // Site contacts validation (body + params)
 // ---------------------------
-
 test.describe('@api Sites contacts validation', () => {
   const invalidSiteContactBodies = [
     { name: 'missing user_id', body: { contact_type_id: 1 } },

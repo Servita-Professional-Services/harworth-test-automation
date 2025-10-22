@@ -1,17 +1,14 @@
 import { test as base, expect, request, APIRequestContext } from '@playwright/test';
-import { SitesClient } from '../../src/clients/sites'; 
-import { SchemesClient } from '../../src/clients/schemes'; 
-
-type Lookups = {
-  landUses: () => Promise<Array<{ id: number }>>;
-  statuses: () => Promise<Array<{ id: number }>>;
-};
+import { SitesClient } from '../../src/clients/sites';
+import { SchemesClient } from '../../src/clients/schemes';
+import { LookupsClient } from '../../src/clients/lookups';
+export { request } from '@playwright/test'; 
 
 type ApiFixtures = {
   api: APIRequestContext;
   sites: SitesClient;
   schemes: SchemesClient;
-  lookups: Lookups;
+  lookups: LookupsClient;
 };
 
 const API_BASE_URL = process.env.DEV_API_BASE_URL as string;
@@ -19,6 +16,13 @@ const API_TOKEN = process.env.DEV_API_AUTH_TOKEN as string;
 
 export const test = base.extend<ApiFixtures>({
   api: async ({}, use) => {
+    if (!API_BASE_URL) {
+      throw new Error('DEV_API_BASE_URL is not set');
+    }
+    if (!API_TOKEN) {
+      throw new Error('DEV_API_AUTH_TOKEN is not set');
+    }
+
     const api = await request.newContext({
       baseURL: API_BASE_URL,
       extraHTTPHeaders: {
@@ -26,8 +30,12 @@ export const test = base.extend<ApiFixtures>({
         'Content-Type': 'application/json',
       },
     });
-    await use(api);
-    await api.dispose();
+
+    try {
+      await use(api);
+    } finally {
+      await api.dispose();
+    }
   },
 
   schemes: async ({ api }, use) => {
@@ -39,19 +47,7 @@ export const test = base.extend<ApiFixtures>({
   },
 
   lookups: async ({ api }, use) => {
-    const lookups: Lookups = {
-      landUses: async () => {
-        const res = await api.get('/lookups/land-uses');
-        expect(res.status(), 'GET /lookups/land-uses').toBe(200);
-        return (await res.json()) as Array<{ id: number }>;
-      },
-      statuses: async () => {
-        const res = await api.get('/lookups/statuses');
-        expect(res.status(), 'GET /lookups/statuses').toBe(200);
-        return (await res.json()) as Array<{ id: number }>;
-      },
-    };
-    await use(lookups);
+    await use(new LookupsClient(api));
   },
 });
 
