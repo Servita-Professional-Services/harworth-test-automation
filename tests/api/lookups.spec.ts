@@ -17,7 +17,7 @@ const ALL_TYPES = [
 // ---------------------------
 test.describe('@api Lookups — contract', () => {
   for (const type of ALL_TYPES) {
-    test(`GET /lookups/${type} — 200 JSON array (allow empty) & no duplicate ids`, async ({ api }) => {
+    test(`GET /lookups/${type} — 200 JSON array & no duplicate ids`, async ({ api }) => {
       const res = await api.get(`/lookups/${type}`);
       expect(res.status()).toBe(200);
 
