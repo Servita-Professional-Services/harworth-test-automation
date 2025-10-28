@@ -1,45 +1,34 @@
 import { test, expect } from '../fixtures/api-fixtures';
 import { request } from '@playwright/test';
-import { idsOf, setOf, isSuperset, arraysEqualByIds, expectNoDuplicateIds } from '../helpers/assertions';
-
-type LookupItem = { id?: number | string; [k: string]: any };
-
-const ALL_TYPES = [
-  'contact-types', 'land-uses', 'locations', 'statuses', 'sites',
-  'schemes', 'divestment-strategies', 'opportunity-sources',
-  'external-companies', 'external-contacts', 'existing-uses',
-  'planning-statuses', 'proposed-uses', 'data-centre-potential',
-  'planning-timeframes', 'deal-structures',
-] as const;
+import {
+  idsOf,
+  setOf,
+  isSuperset,
+  arraysEqualByIds,
+  expectNoDuplicateIds,
+} from '../helpers/assertions';
+import type { LookupItem } from '../../src/clients/lookups';
+import { ALL_LOOKUP_TYPES } from '../../src/clients/lookups';
 
 // ---------------------------
 // Contract (all lookups)
 // ---------------------------
 test.describe('@api Lookups — contract', () => {
-  for (const type of ALL_TYPES) {
-    test(`GET /lookups/${type} — 200 JSON array & no duplicate ids`, async ({ api }) => {
-      const res = await api.get(`/lookups/${type}`);
-      expect(res.status()).toBe(200);
-
-      const ctype = (res.headers()['content-type'] ?? '').toLowerCase();
-      expect(ctype).toContain('application/json');
-
-      const data = (await res.json()) as LookupItem[];
+  for (const type of ALL_LOOKUP_TYPES) {
+    test(`lookups("${type}") — returns JSON array with unique ids`, async ({ lookups }) => {
+      const data = await lookups.get(type);
       expect(Array.isArray(data)).toBe(true);
-
-      for (const item of data) {
-        expect(typeof item).toBe('object');
-        expect(item).not.toBeNull();
+      for (const item of data as LookupItem[]) {
+        expect(item && typeof item).toBe('object');
       }
-
-      expectNoDuplicateIds(data, `/lookups/${type}`);
+      expectNoDuplicateIds(data as LookupItem[], `lookups:${type}`);
     });
   }
 
   test('GET /lookups/statuses — items expose { id:number, display_name:string }', async ({ api }) => {
     const res = await api.get('/lookups/statuses');
     expect(res.status()).toBe(200);
-    const rows = await res.json() as Array<any>;
+    const rows = (await res.json()) as Array<any>;
     for (const r of rows) {
       expect(typeof r.id).toBe('number');
       expect(typeof r.display_name).toBe('string');
@@ -51,24 +40,15 @@ test.describe('@api Lookups — contract', () => {
 // Unknown query params (all lookups)
 // ---------------------------
 test.describe('@api Lookups — unknown query params', () => {
-  for (const type of ALL_TYPES) {
-    test(`GET /lookups/${type}?foo=bar — 400 OR ignored-as-200 (results equal baseline)`, async ({ api }) => {
-      const baselineRes = await api.get(`/lookups/${type}`);
-      expect(baselineRes.status()).toBe(200);
-      const baseline = await baselineRes.json();
-
-      const res = await api.get(`/lookups/${type}`, { params: { foo: 'bar' } });
-      const status = res.status();
-
-      if (status === 400) {
-        const body = await res.json().catch(() => ({}));
-        const msg = JSON.stringify(body).toLowerCase();
+  for (const type of ALL_LOOKUP_TYPES) {
+    test(`lookups("${type}") + unknown param => 400 or 200 with unchanged results`, async ({ lookups }) => {
+      const baseline = await lookups.get(type);
+      try {
+        const withUnknown = await lookups.get(type, { foo: 'bar' });
+        expect(arraysEqualByIds(withUnknown, baseline)).toBe(true);
+      } catch (err: any) {
+        const msg = String(err?.message ?? '').toLowerCase();
         expect(msg).toContain('foo');
-      } else if (status === 200) {
-        const data = await res.json();
-        expect(arraysEqualByIds(data, baseline)).toBe(true);
-      } else {
-        throw new Error(`Unexpected status for unknown param on /lookups/${type}: ${status}`);
       }
     });
   }

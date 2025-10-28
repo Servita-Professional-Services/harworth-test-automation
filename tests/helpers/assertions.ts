@@ -1,3 +1,5 @@
+import { expect } from "@playwright/test";
+
 export type Row = Record<string, unknown>;
 
 export function idsOf(rows: Row[]): string[] {
@@ -60,3 +62,20 @@ export function expectAtMostN<T>(rows: T[], n: number) {
 }
 
 export const INVALID_ID_CASES = [-1, 0, 1.5, 'foo'] as const;
+
+export async function expectDeleted<T>(
+  fetcher: (ids: number[]) => Promise<T[]>,
+  id: number
+): Promise<void> {
+  try {
+    const items = await fetcher([id]);
+    if (Array.isArray(items) && items.length === 0) return;
+    throw new Error(`Expected no results for id=${id}, but got ${JSON.stringify(items)}`);
+  } catch (err: any) {
+    const msg = String(err?.message ?? '');
+    if (msg.includes('"statusCode":404') || msg.includes('Not Found')) return;
+    throw err; 
+  }
+}
+
+
