@@ -10,7 +10,6 @@ import {
 // ---------------------------
 // Query validation & filtering (schemesQueryValidation)
 // ---------------------------
-
 test.describe('@api Schemes validation & filtering', () => {
   test('List includes a newly created scheme', async ({ schemes }) => {
     const payload = makeSchemePayload();
@@ -79,7 +78,6 @@ test.describe('@api Schemes validation & filtering', () => {
 // ---------------------------
 // Create validations (schemeCreateBodyValidation)
 // ---------------------------
-
 test.describe('@api Schemes create validations', () => {
   const invalidCreates = [
     { name: 'missing display_name', body: { description: 'd' } },
@@ -115,7 +113,6 @@ test.describe('@api Schemes create validations', () => {
 // ---------------------------
 // Update validations (schemeUpdateBodyValidation)
 // ---------------------------
-
 test.describe('@api Schemes update validations', () => {
   test('Updates a scheme and returns the updated object', async ({ schemes }) => {
     const original = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
@@ -132,11 +129,11 @@ test.describe('@api Schemes update validations', () => {
   });
 
   for (const field of ['display_name', 'description', 'imported'] as const) {
-    test(`Allows ${field}=null on update`, async ({ schemes }) => {
+    test(`Rejects ${field}=null on update (400)`, async ({ api, schemes }) => {
       const s = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
       try {
-        const updated = await schemes.update(s.id, { [field]: null } as any);
-        expect(String(updated.id)).toBe(String(s.id));
+        const res = await api.put(`/schemes/${s.id}`, { data: { [field]: null } as any });
+        expect(res.status()).toBe(400);
       } finally {
         await schemes.delete(s.id);
       }
@@ -163,7 +160,6 @@ test.describe('@api Schemes update validations', () => {
 // ---------------------------
 // Delete and param validations (get/update/delete/history)
 // ---------------------------
-
 test.describe('@api Schemes delete & params', () => {
   test('Deletes a scheme (204) and removes it from list', async ({ schemes }) => {
     const s = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
@@ -193,7 +189,6 @@ test.describe('@api Schemes delete & params', () => {
 // ---------------------------
 // History endpoint (params + pagination)
 // ---------------------------
-
 test.describe('@api Schemes history validation', () => {
   test('History returns data for valid id (may be empty)', async ({ schemes }) => {
     const s = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
