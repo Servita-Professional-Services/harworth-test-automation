@@ -2,6 +2,7 @@ import { test as base, expect, request, APIRequestContext } from '@playwright/te
 import { SitesClient } from '../../src/clients/sites';
 import { SchemesClient } from '../../src/clients/schemes';
 import { LookupsClient } from '../../src/clients/lookups';
+import { OpportunityMetadataClient } from '../../src/clients/opportunity-metadata';
 import { LandUnitsClient } from '../../src/clients/land-units';
 
 type ApiFixtures = {
@@ -10,6 +11,7 @@ type ApiFixtures = {
   schemes: SchemesClient;
   lookups: LookupsClient;
   landUnits: LandUnitsClient;
+  oppMeta: OpportunityMetadataClient;
 };
 
 const API_BASE_URL = process.env.DEV_API_BASE_URL as string;
@@ -28,13 +30,25 @@ export const test = base.extend<ApiFixtures>({
     await api.dispose();
   },
 
-  schemes: async ({ api }, use) => use(new SchemesClient(api)),
+  schemes: async ({ api }, use) => {
+    await use(new SchemesClient(api));
+  },
 
-  sites: async ({ api }, use) => use(new SitesClient(api)),
+  sites: async ({ api }, use) => {
+    await use(new SitesClient(api));
+  },
 
-  lookups: async ({ api }, use) => use(new LookupsClient(api)),
+  lookups: async ({ api }, use) => {
+    await use(new LookupsClient(api));
+  },
 
-  landUnits: async ({ api }, use) => use(new LandUnitsClient(api)),
+  landUnits: async ({ api }, use) => {
+    await use(new LandUnitsClient(api));
+  },
+
+  oppMeta: async ({ api }, use) => {
+    await use(new OpportunityMetadataClient(api));
+  },
 });
 
 export { expect, request };

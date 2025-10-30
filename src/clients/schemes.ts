@@ -16,7 +16,7 @@ export type SchemesQuery = {
 
 export type CreateScheme = {
   display_name: string;
-  description: string; // required by contract
+  description: string; 
   imported?: boolean;
 };
 
