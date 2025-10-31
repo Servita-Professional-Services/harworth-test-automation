@@ -12,15 +12,13 @@ import {
 // Contract (GET)
 // ---------------------------
 test.describe('@api Opportunity Metadata — contract', () => {
-  test('GET /sites/:id/opportunity-metadata returns 200 and valid object (skip if feature disabled)', async ({ api, sites, schemes }) => {
+  test('GET /sites/:id/opportunity-metadata returns 200 and valid object', async ({ api, sites, schemes }) => {
     const scheme = await schemes.create(makeSchemePayload());
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
 
     try {
       const res = await api.get(`/sites/${site.id}/opportunity-metadata`);
       const status = res.status();
-      if ([403, 404, 501].includes(status)) test.skip(true, `Feature/route not available (status ${status}).`);
-
       expect(status).toBe(200);
       const body = await res.json().catch(() => ({}));
       expect(typeof body).toBe('object');
