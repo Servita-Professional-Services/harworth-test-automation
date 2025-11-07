@@ -1,9 +1,13 @@
 import { test as base } from '@playwright/test';
-import { PortalWelcome } from '../../src/pages/welcome'; 
-import { PortalLogin } from '../../src/pages/login'; 
+import { PortalWelcome } from '../../src/pages/welcome';
+import { PortalLogin } from '../../src/pages/login';
+import { PortalNavbar } from '../../src/pages/navbar';
+
 type Fixtures = {
   portalWelcome: PortalWelcome;
-  portalLogin: PortalLogin; 
+  portalNavbar: PortalNavbar;
+
+  makePortalLogin: (p: import('@playwright/test').Page) => PortalLogin;
 };
 
 export const test = base.extend<Fixtures>({
@@ -11,8 +15,12 @@ export const test = base.extend<Fixtures>({
     await use(new PortalWelcome(page));
   },
 
-  portalLogin: async ({ page, context }, use) => {
-    await use(new PortalLogin(page));
+  portalNavbar: async ({ page }, use) => {
+    await use(new PortalNavbar(page));
+  },
+
+  makePortalLogin: async ({}, use) => {
+    await use((p) => new PortalLogin(p));
   },
 });
 

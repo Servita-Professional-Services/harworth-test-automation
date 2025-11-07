@@ -1,6 +1,5 @@
 import { test, expect } from '../fixtures/api-fixtures';
 import {
-  expectIdsContain,
   expectAtMostN,
   INVALID_ID_CASES,
   expectDeleted,
@@ -68,7 +67,7 @@ test.describe('@api Land Units — create validation', () => {
     });
   }
 
-  test('@sam POST /land-units creates a land unit successfully with valid data', async ({ landUnits, lookups, sites, schemes }) => {
+  test('@api POST /land-units creates a land unit successfully with valid data', async ({ landUnits, lookups, sites, schemes }) => {
     const scheme = await schemes.create(makeSchemePayload());
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
@@ -80,7 +79,6 @@ test.describe('@api Land Units — create validation', () => {
       created = await landUnits.create(payload);
       expect(created.id).toBeDefined();
 
-      // ✅ Verify with canonical read (avoids “ids must be an array” issue)
       const got = await landUnits.get(created.id);
       expect(String(got.id)).toBe(String(created.id));
     } finally {

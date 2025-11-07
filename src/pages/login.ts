@@ -25,5 +25,6 @@ export class PortalLogin {
     await this.nextButton.click();
     await this.passwordField.fill(password);
     await this.signInButton.click();
+    await this.page.pause(); // ⏸ opens inspector, you finish 2FA manually, then resume
   }
 }
