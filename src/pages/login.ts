@@ -15,6 +15,12 @@ export class PortalLogin {
   private get nextButton() {
     return this.page.getByRole('button', { name: 'Next' });
   }
+  private get staySignedInHeader() {
+    return this.page.getByRole('heading', { name: 'Stay signed in?' });
+  }
+  private get doNotStaySignedInButton() {
+    return this.page.getByRole('button', { name: 'No' });
+  }
 
   async assertLoaded() {
     await this.emailField.waitFor({ state: 'visible' });
@@ -25,6 +31,8 @@ export class PortalLogin {
     await this.nextButton.click();
     await this.passwordField.fill(password);
     await this.signInButton.click();
-    await this.page.pause(); // ⏸ opens inspector, you finish 2FA manually, then resume
+    if(await this.staySignedInHeader.isVisible) {
+      await this.doNotStaySignedInButton.click();
+    }
   }
 }

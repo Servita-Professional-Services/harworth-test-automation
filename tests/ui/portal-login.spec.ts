@@ -1,8 +1,8 @@
 import { test, expect } from '../fixtures/ui-fixtures'; 
 import { PortalLogin } from '../../src/pages/login';
 
-const email = process.env.DEV_PORTAL_LOGIN_EMAIL as string;
-const password = process.env.DEV_PORTAL_LOGIN_PASSWORD as string;
+const email = process.env.QA_PORTAL_LOGIN_EMAIL as string;
+const password = process.env.QA_PORTAL_LOGIN_PASSWORD as string;
 
 test('@ui Portal login', async ({ page, context, portalWelcome }) => {
   await portalWelcome.open();

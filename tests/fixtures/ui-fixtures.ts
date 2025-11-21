@@ -1,22 +1,28 @@
-import { test as base } from '@playwright/test';
+import { test as base } from './api-fixtures';
 import { PortalWelcome } from '../../src/pages/welcome';
 import { PortalLogin } from '../../src/pages/login';
 import { PortalNavbar } from '../../src/pages/navbar';
+import { PortalSchemeDirectory } from '../../src/pages/scheme-directory';
 
-type Fixtures = {
+type UiFixtures = {
   portalWelcome: PortalWelcome;
   portalNavbar: PortalNavbar;
+  portalSchemeDirectory: PortalSchemeDirectory;
 
   makePortalLogin: (p: import('@playwright/test').Page) => PortalLogin;
 };
 
-export const test = base.extend<Fixtures>({
+export const test = base.extend<UiFixtures>({
   portalWelcome: async ({ page }, use) => {
     await use(new PortalWelcome(page));
   },
 
   portalNavbar: async ({ page }, use) => {
     await use(new PortalNavbar(page));
+  },
+
+  portalSchemeDirectory: async ({ page }, use) => {
+    await use(new PortalSchemeDirectory(page));
   },
 
   makePortalLogin: async ({}, use) => {

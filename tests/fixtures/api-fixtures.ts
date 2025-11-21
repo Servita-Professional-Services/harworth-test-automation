@@ -1,4 +1,4 @@
-import { test as base, expect, request, APIRequestContext } from '@playwright/test';
+import { test as base, request, APIRequestContext } from '@playwright/test';
 import { SitesClient } from '../../src/clients/sites';
 import { SchemesClient } from '../../src/clients/schemes';
 import { LookupsClient } from '../../src/clients/lookups';
@@ -14,8 +14,8 @@ type ApiFixtures = {
   oppMeta: OpportunityMetadataClient;
 };
 
-const API_BASE_URL = process.env.DEV_API_BASE_URL as string;
-const API_TOKEN = process.env.DEV_API_AUTH_TOKEN as string;
+const API_BASE_URL = process.env.QA_API_BASE_URL as string;
+const API_TOKEN = process.env.QA_API_AUTH_TOKEN as string;
 
 export const test = base.extend<ApiFixtures>({
   api: async ({}, use) => {
@@ -26,6 +26,7 @@ export const test = base.extend<ApiFixtures>({
         'Content-Type': 'application/json',
       },
     });
+
     await use(api);
     await api.dispose();
   },
@@ -51,4 +52,5 @@ export const test = base.extend<ApiFixtures>({
   },
 });
 
-export { expect, request };
+export const expect = test.expect;
+export { request };

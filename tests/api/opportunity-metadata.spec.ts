@@ -142,7 +142,7 @@ test.describe('@api Opportunity Metadata — parameter validation', () => {
 // ---------------------------
 test.describe('@api Opportunity Metadata — authentication', () => {
   test('GET unauthenticated returns 401', async () => {
-    const baseURL = process.env.DEV_API_BASE_URL!;
+    const baseURL = process.env.QA_API_BASE_URL!;
     const apiNoAuth = await request.newContext({ baseURL, extraHTTPHeaders: { 'Content-Type': 'application/json' } });
     try {
       const res = await apiNoAuth.get('/sites/1/opportunity-metadata');
@@ -153,7 +153,7 @@ test.describe('@api Opportunity Metadata — authentication', () => {
   });
 
   test('PUT unauthenticated returns 401 or 403', async () => {
-    const baseURL = process.env.DEV_API_BASE_URL!;
+    const baseURL = process.env.QA_API_BASE_URL!;
     const apiNoAuth = await request.newContext({ baseURL, extraHTTPHeaders: { 'Content-Type': 'application/json' } });
     try {
       const res = await apiNoAuth.put('/sites/1/opportunity-metadata', { data: {} });

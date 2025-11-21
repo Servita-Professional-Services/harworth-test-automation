@@ -149,7 +149,7 @@ test.describe('@api Lookups — filters & validation', () => {
 // ---------------------------
 test.describe('@api Lookups — auth', () => {
   test('GET /lookups/statuses — unauthenticated request returns 401', async () => {
-    const baseURL = process.env.DEV_API_BASE_URL!;
+    const baseURL = process.env.QA_API_BASE_URL!;
     const apiNoAuth = await request.newContext({ baseURL, extraHTTPHeaders: { 'Content-Type': 'application/json' } });
     try {
       const res = await apiNoAuth.get('/lookups/statuses');
@@ -160,7 +160,7 @@ test.describe('@api Lookups — auth', () => {
   });
 
   test('GET /lookups/statuses — invalid token returns 401 or 403', async () => {
-    const baseURL = process.env.DEV_API_BASE_URL!;
+    const baseURL = process.env.QA_API_BASE_URL!;
     const apiBadAuth = await request.newContext({
       baseURL,
       extraHTTPHeaders: {
