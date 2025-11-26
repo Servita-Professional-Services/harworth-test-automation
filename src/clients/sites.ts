@@ -135,8 +135,6 @@ export class SitesClient {
     return res.json().catch(() => ({}));
   }
 
-  // ---------- Internals ----------
-
   #buildUrl(base: string, q: SitesQuery) {
     const { ids, ...rest } = q;
     let url = base;
@@ -169,5 +167,19 @@ export class SitesClient {
     if (ok.includes(res.status())) return;
     const text = await res.text().catch(() => '');
     throw new Error(`${action} failed: ${res.status()} — ${text}`);
+  }
+
+  async getIdByDisplayName(name: string): Promise<number | string> {
+    const rows = await this.list({ display_name: name });
+    const match = rows.find(
+      r => (r.display_name ?? (r as any).displayName) === name
+    );
+  
+    if (!match?.id && match?.id !== 0) {
+      throw new Error(
+        `getIdByDisplayNameOrThrow: site with display_name='${name}' not found`
+      );
+    }
+    return match.id;
   }
 }

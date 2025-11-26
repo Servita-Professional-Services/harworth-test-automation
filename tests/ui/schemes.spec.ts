@@ -13,9 +13,8 @@ test('@ui Create and Update Scheme via Portal', async ({
   portalNavbar,
   portalSchemeDirectory,
   makePortalLogin,
-  schemes,              
+  schemes,
 }) => {
-
   try {
     await test.step('Open Welcome page', async () => {
       await portalWelcome.open();
@@ -41,19 +40,31 @@ test('@ui Create and Update Scheme via Portal', async ({
       await portalSchemeDirectory.submitSchemeForm();
       await portalSchemeDirectory.assertMandatoryFieldErrorsVisible();
     });
-    
+
     await test.step('Create Scheme via UI', async () => {
       await portalSchemeDirectory.createScheme(schemeName, schemeDescription);
       createdSchemeId = await schemes.getIdByDisplayName(schemeName);
     });
 
+    await test.step('Edit scheme description and verify new value is saved', async () => {
+      const editedDescription = schemeDescription + ' Edited';
+      await portalSchemeDirectory.editSchemeDescription(editedDescription);
+      await portalSchemeDirectory.assertSchemeDescription(editedDescription);
+    });
+
   } finally {
     if (createdSchemeId != null) {
-      await test.step(`Cleanup: Delete scheme ${createdSchemeId} via API`, async () => {
-      await schemes.delete(createdSchemeId);
-      const rows = await schemes.listByIds([createdSchemeId]);
-      expect(rows, `Scheme '${schemeName}' (id=${createdSchemeId}) should be deleted in cleanup`).toHaveLength(0);
-      });
+      await test.step(
+        `Cleanup: Delete scheme ${createdSchemeId} via API`,
+        async () => {
+          await schemes.delete(createdSchemeId);
+          const rows = await schemes.listByIds([createdSchemeId]);
+          expect(
+            rows,
+            `Scheme '${schemeName}' (id=${createdSchemeId}) should be deleted in cleanup`,
+          ).toHaveLength(0);
+        },
+      );
     }
   }
 });
