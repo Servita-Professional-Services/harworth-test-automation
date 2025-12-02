@@ -11,8 +11,8 @@ import {
 // Query validation & filtering (schemesQueryValidation)
 // ---------------------------
 test.describe('@api Schemes validation & filtering', () => {
-  test('List includes a newly created scheme', async ({ schemes }) => {
-    const payload = makeSchemePayload();
+  test('List includes a newly created scheme', async ({ schemes, api }) => {
+    const payload = await makeSchemePayload(api);
     let created: any;
     try {
       created = await schemes.create(payload);
@@ -24,11 +24,28 @@ test.describe('@api Schemes validation & filtering', () => {
     }
   });
 
-  test('Filters by display_name returns matching scheme', async ({ schemes }) => {
-    const a = await schemes.create({ display_name: `e2e-${Date.now()}-A`, description: 'desc A' });
-    const b = await schemes.create({ display_name: `e2e-${Date.now()}-B`, description: 'desc B' });
+  test('Filters by display_name returns matching scheme', async ({ schemes, api }) => {
+    const base = `e2e-${Date.now()}`;
+
+    const payloadA = await makeSchemePayload(api);
+    const payloadB = await makeSchemePayload(api);
+
+    const a = await schemes.create({
+      ...payloadA,
+      display_name: `${base}-A`,
+      description: 'desc A',
+    });
+
+    const b = await schemes.create({
+      ...payloadB,
+      display_name: `${base}-B`,
+      description: 'desc B',
+    });
+
     try {
-      const rows = await schemes.list({ display_name: a.display_name ?? (a as any).displayName });
+      const rows = await schemes.list({
+        display_name: a.display_name ?? (a as any).displayName,
+      });
       expectIdsContain(rows, a.id);
       expectIdsNotContain(rows, b.id);
     } finally {
@@ -37,9 +54,10 @@ test.describe('@api Schemes validation & filtering', () => {
     }
   });
 
-  test('Filters by ids returns selected schemes', async ({ schemes }) => {
-    const s1 = await schemes.create({ display_name: `e2e-${Date.now()}-1`, description: 'd1' });
-    const s2 = await schemes.create({ display_name: `e2e-${Date.now()}-2`, description: 'd2' });
+  test('Filters by ids returns selected schemes', async ({ schemes, api }) => {
+    const s1 = await schemes.create(await makeSchemePayload(api));
+    const s2 = await schemes.create(await makeSchemePayload(api));
+
     try {
       const rows = await schemes.listByIds([s1.id, s2.id]);
       expectIdsContain(rows, s1.id, s2.id);
@@ -58,8 +76,14 @@ test.describe('@api Schemes validation & filtering', () => {
   const invalidPaginations = [
     { name: 'page=0', params: { page: 0, limit: 1 } },
     { name: 'limit=-1', params: { page: 1, limit: -1 } },
-    { name: 'page not numeric', params: { page: 'x', limit: 1 } as Record<string, string | number> },
-    { name: 'limit not numeric', params: { page: 1, limit: 'x' } as Record<string, string | number> },
+    {
+      name: 'page not numeric',
+      params: { page: 'x', limit: 1 } as Record<string, string | number>,
+    },
+    {
+      name: 'limit not numeric',
+      params: { page: 1, limit: 'x' } as Record<string, string | number>,
+    },
   ] as const;
 
   for (const { name, params } of invalidPaginations) {
@@ -80,10 +104,31 @@ test.describe('@api Schemes validation & filtering', () => {
 // ---------------------------
 test.describe('@api Schemes create validations', () => {
   const invalidCreates = [
-    { name: 'missing display_name', body: { description: 'd' } },
-    { name: 'missing description', body: { display_name: 'x' } },
-    { name: 'description > 500', body: { display_name: 'x', description: 'x'.repeat(501) } },
-    { name: 'imported not boolean', body: { display_name: 'x', description: 'd', imported: 'yes' } },
+    {
+      name: 'missing display_name',
+      body: { description: 'd', status_id: 76 },
+    },
+    {
+      name: 'missing description',
+      body: { display_name: 'x', status_id: 76 },
+    },
+    {
+      name: 'description > 500',
+      body: {
+        display_name: 'x',
+        description: 'x'.repeat(501),
+        status_id: 76,
+      },
+    },
+    {
+      name: 'imported not boolean',
+      body: {
+        display_name: 'x',
+        description: 'd',
+        imported: 'yes',
+        status_id: 76,
+      },
+    },
   ] as const;
 
   for (const { name, body } of invalidCreates) {
@@ -93,13 +138,15 @@ test.describe('@api Schemes create validations', () => {
     });
   }
 
-  test('Creates a scheme successfully (201/200)', async ({ schemes }) => {
-    const payload = makeSchemePayload();
+  test('Creates a scheme successfully (201/200)', async ({ schemes, api }) => {
+    const payload = await makeSchemePayload(api);
     let created: any;
     try {
       created = await schemes.create(payload);
       expect(created.id).toBeDefined();
-      expect(created.display_name ?? (created as any).displayName).toBe(payload.display_name);
+      expect(created.display_name ?? (created as any).displayName).toBe(
+        payload.display_name,
+      );
       expect(created.description).toBe(payload.description);
 
       const all = await schemes.listByIds([created.id]);
@@ -114,11 +161,16 @@ test.describe('@api Schemes create validations', () => {
 // Update validations (schemeUpdateBodyValidation)
 // ---------------------------
 test.describe('@api Schemes update validations', () => {
-  test('Updates a scheme and returns the updated object', async ({ schemes }) => {
-    const original = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
+  test('Updates a scheme and returns the updated object', async ({
+    schemes,
+    api,
+  }) => {
+    const original = await schemes.create(await makeSchemePayload(api));
     try {
       const updated = await schemes.update(original.id, {
-        display_name: `${original.display_name ?? (original as any).displayName}-updated`,
+        display_name: `${
+          original.display_name ?? (original as any).displayName
+        }-updated`,
         description: 'desc-updated',
       });
       expect(String(updated.id)).toBe(String(original.id));
@@ -130,9 +182,11 @@ test.describe('@api Schemes update validations', () => {
 
   for (const field of ['display_name', 'description', 'imported'] as const) {
     test(`Rejects ${field}=null on update (400)`, async ({ api, schemes }) => {
-      const s = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
+      const s = await schemes.create(await makeSchemePayload(api));
       try {
-        const res = await api.put(`/schemes/${s.id}`, { data: { [field]: null } as any });
+        const res = await api.put(`/schemes/${s.id}`, {
+          data: { [field]: null } as any,
+        });
         expect(res.status()).toBe(400);
       } finally {
         await schemes.delete(s.id);
@@ -146,7 +200,7 @@ test.describe('@api Schemes update validations', () => {
 
   for (const { name, body } of invalidUpdates) {
     test(`Update rejected (400): ${name}`, async ({ api, schemes }) => {
-      const s = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
+      const s = await schemes.create(await makeSchemePayload(api));
       try {
         const res = await api.put(`/schemes/${s.id}`, { data: body as any });
         expect(res.status()).toBe(400);
@@ -161,8 +215,11 @@ test.describe('@api Schemes update validations', () => {
 // Delete and param validations (get/update/delete/history)
 // ---------------------------
 test.describe('@api Schemes delete & params', () => {
-  test('Deletes a scheme (204) and removes it from list', async ({ schemes }) => {
-    const s = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
+  test('Deletes a scheme (204) and removes it from list', async ({
+    schemes,
+    api,
+  }) => {
+    const s = await schemes.create(await makeSchemePayload(api));
     await schemes.delete(s.id);
     const rows = await schemes.listByIds([s.id]);
     expectIdsNotContain(rows, s.id);
@@ -175,11 +232,15 @@ test.describe('@api Schemes delete & params', () => {
     });
 
     test(`PUT /schemes invalid id (400) — ${String(bad)}`, async ({ api }) => {
-      const res = await api.put(`/schemes/${String(bad)}`, { data: { display_name: 'x' } });
+      const res = await api.put(`/schemes/${String(bad)}`, {
+        data: { display_name: 'x' },
+      });
       expect(res.status()).toBe(400);
     });
 
-    test(`DELETE /schemes invalid id (400) — ${String(bad)}`, async ({ api }) => {
+    test(`DELETE /schemes invalid id (400) — ${String(bad)}`, async ({
+      api,
+    }) => {
       const res = await api.delete(`/schemes/${String(bad)}`);
       expect(res.status()).toBe(400);
     });
@@ -190,8 +251,11 @@ test.describe('@api Schemes delete & params', () => {
 // History endpoint (params + pagination)
 // ---------------------------
 test.describe('@api Schemes history validation', () => {
-  test('History returns data for valid id (may be empty)', async ({ schemes }) => {
-    const s = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
+  test('History returns data for valid id (may be empty)', async ({
+    schemes,
+    api,
+  }) => {
+    const s = await schemes.create(await makeSchemePayload(api));
     try {
       const hist = await schemes.history(s.id);
       expect(Array.isArray(hist)).toBe(true);
@@ -201,19 +265,28 @@ test.describe('@api Schemes history validation', () => {
   });
 
   for (const bad of INVALID_ID_CASES) {
-    test(`GET /schemes/:id/history invalid id (400) — ${String(bad)}`, async ({ api }) => {
+    test(`GET /schemes/:id/history invalid id (400) — ${String(bad)}`, async ({
+      api,
+    }) => {
       const res = await api.get(`/schemes/${String(bad)}/history`);
       expect(res.status()).toBe(400);
     });
   }
 
-  test('History paginates with valid params; rejects invalid (400)', async ({ schemes, api }) => {
-    const s = await schemes.create({ display_name: `e2e-${Date.now()}`, description: 'desc' });
+  test('History paginates with valid params; rejects invalid (400)', async ({
+    schemes,
+    api,
+  }) => {
+    const s = await schemes.create(await makeSchemePayload(api));
     try {
-      const ok = await api.get(`/schemes/${s.id}/history`, { params: { page: 1, limit: 1 } });
+      const ok = await api.get(`/schemes/${s.id}/history`, {
+        params: { page: 1, limit: 1 },
+      });
       expect([200, 204]).toContain(ok.status());
 
-      const bad = await api.get(`/schemes/${s.id}/history`, { params: { page: 0, limit: -1 } });
+      const bad = await api.get(`/schemes/${s.id}/history`, {
+        params: { page: 0, limit: -1 },
+      });
       expect(bad.status()).toBe(400);
     } finally {
       await schemes.delete(s.id);

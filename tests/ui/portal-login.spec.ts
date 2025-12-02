@@ -1,21 +1,22 @@
-import { test, expect } from '../fixtures/ui-fixtures'; 
-import { PortalLogin } from '../../src/pages/login';
+import { test } from '../fixtures/ui-fixtures'; 
 
 const email = process.env.QA_PORTAL_LOGIN_EMAIL as string;
 const password = process.env.QA_PORTAL_LOGIN_PASSWORD as string;
 
-test('@ui Portal login', async ({ page, context, portalWelcome }) => {
-  await portalWelcome.open();
+test('@ui Portal login', async ({ context, portalWelcome, makePortalLogin }) => {
+  await test.step('Open Welcome page', async () => {
+    await portalWelcome.open();
+  });
 
-  const loginPage = await portalWelcome.clickSignInAndGetLoginPage(context);
+  const loginPage = await test.step('Open login popup', async () => {
+    return portalWelcome.clickSignInAndGetLoginPage(context);
+  });
 
-  const portalLogin = new PortalLogin(loginPage);
-  await portalLogin.assertLoaded();
+  const portalLogin = makePortalLogin(loginPage);
 
-  await portalLogin.login(email!, password!);
-
-  if (loginPage !== page) {
-    await loginPage.waitForEvent('close', { timeout: 10_000 }).catch(() => {});
-  }
+  await test.step('Login to Portal', async () => {
+    await portalLogin.assertLoaded();
+    await portalLogin.login(email!, password!);
+  });
 
 });

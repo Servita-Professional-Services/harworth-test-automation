@@ -1,4 +1,5 @@
 import { expect, Page } from '@playwright/test';
+import { selectRandomOption } from '../../tests/helpers/ui'; 
 
 export class PortalSchemeDirectory {
   constructor(private readonly page: Page) {}
@@ -38,6 +39,12 @@ export class PortalSchemeDirectory {
   private get schemeFilterInput() {
     return this.page.getByTestId('typeahead-input-scheme-filter');
   }
+  private get emptyStatusErrorMessage() {
+    return this.page.getByText('Status is required');
+  }
+  private get statusDropdown() {
+    return this.page.getByTestId('scheme-status-select');
+  }
   private schemeOption(name: string) {
     return this.page.getByRole('option', { name });
   }
@@ -52,6 +59,7 @@ export class PortalSchemeDirectory {
   async fillSchemeForm(name: string, description: string) {
     await this.schemeNameInput.fill(name);
     await this.schemeDescriptionInput.fill(description);
+    await selectRandomOption(this.statusDropdown);
   }
 
   async submitSchemeForm() {
@@ -79,6 +87,7 @@ export class PortalSchemeDirectory {
   async assertMandatoryFieldErrorsVisible() {
     await expect(this.emptyNameErrorMessage).toBeVisible();
     await expect(this.emptyDescriptionErrorMessage).toBeVisible();
+    await expect(this.emptyStatusErrorMessage).toBeVisible();
   }
 
   async readSchemeDescription() {

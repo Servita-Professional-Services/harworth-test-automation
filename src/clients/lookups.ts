@@ -31,7 +31,7 @@ export type LookupParams = Record<string, string | number | boolean | undefined>
 
 export const CONSOLIDATED_LOOKUP_TYPES: LookupType[] = [
   'contact-type',
-  'land-use',
+  //'land-use',
   'divestment-strategy',
   'opportunity-source',
   'existing-use',

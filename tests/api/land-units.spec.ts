@@ -67,8 +67,9 @@ test.describe('@api Land Units — create validation', () => {
     });
   }
 
-  test('@api POST /land-units creates a land unit successfully with valid data', async ({ landUnits, lookups, sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('@api POST /land-units creates a land unit successfully with valid data', async ({ landUnits, lookups, sites, schemes, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
     const landUses = await lookups.landUses();
@@ -90,8 +91,9 @@ test.describe('@api Land Units — create validation', () => {
 });
 
 test.describe('@api Land Units — update validation', () => {
-  test('PUT /land-units rejects invalid unit_of_measure (400)', async ({ landUnits, lookups, sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('PUT /land-units rejects invalid unit_of_measure (400)', async ({ landUnits, lookups, sites, schemes, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
     const landUses = await lookups.landUses();
@@ -107,8 +109,9 @@ test.describe('@api Land Units — update validation', () => {
     await schemes.delete(scheme.id);
   });
 
-  test('PUT /land-units updates successfully with valid data', async ({ landUnits, lookups, sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('PUT /land-units updates successfully with valid data', async ({ landUnits, lookups, sites, schemes, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
     const landUses = await lookups.landUses();
@@ -125,8 +128,9 @@ test.describe('@api Land Units — update validation', () => {
 });
 
 test.describe('@api Land Units — delete & history', () => {
-  test('DELETE /land-units deletes a created land unit successfully', async ({ landUnits, lookups, sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('DELETE /land-units deletes a created land unit successfully', async ({ landUnits, lookups, sites, schemes, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
     const landUses = await lookups.landUses();
@@ -139,8 +143,9 @@ test.describe('@api Land Units — delete & history', () => {
     await schemes.delete(scheme.id);
   });
 
-  test('GET /land-units/:id/history returns empty array for valid ID (no history yet)', async ({ landUnits, lookups, sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('GET /land-units/:id/history returns empty array for valid ID (no history yet)', async ({ landUnits, lookups, sites, schemes, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
     const landUses = await lookups.landUses();

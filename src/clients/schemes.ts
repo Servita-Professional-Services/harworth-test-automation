@@ -4,6 +4,7 @@ export type Scheme = {
   id: number | string;
   display_name?: string;
   description?: string;
+  status_id?: number;
   imported?: boolean;
 };
 
@@ -16,13 +17,15 @@ export type SchemesQuery = {
 
 export type CreateScheme = {
   display_name: string;
-  description: string; 
+  description: string;
+  status_id?: number;
   imported?: boolean;
 };
 
 export type UpdateScheme = {
   display_name?: string | null;
   description?: string | null;
+  status_id?: number | null;
   imported?: boolean | null;
 };
 

@@ -13,7 +13,8 @@ import {
 // ---------------------------
 test.describe('@api Opportunity Metadata — contract', () => {
   test('GET /sites/:id/opportunity-metadata returns 200 and valid object', async ({ api, sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
 
     try {
@@ -36,7 +37,8 @@ test.describe('@api Opportunity Metadata — contract', () => {
 // ---------------------------
 test.describe('@api Opportunity Metadata — update validation', () => {
   test('PUT rejects invalid field values with 400', async ({ api, sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
 
     try {
@@ -59,7 +61,8 @@ test.describe('@api Opportunity Metadata — update validation', () => {
   });
 
   test('PUT accepts nulls for all optional fields', async ({ api, sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
 
     try {
@@ -82,7 +85,8 @@ test.describe('@api Opportunity Metadata — update validation', () => {
   });
 
   test('PUT accepts valid lookup IDs and updates fields successfully', async ({ api, lookups, sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
 
     try {

@@ -12,8 +12,9 @@ import {
 // Query validation & filtering (sitesQueryValidation)
 // ---------------------------
 test.describe('@api Sites validation & filtering', () => {
-  test('Filters by display_name returns matching site', async ({ sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('Filters by display_name returns matching site', async ({ sites, schemes, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     try {
       const nameA = `e2e-site-${Date.now()}-A`;
       const nameB = `e2e-site-${Date.now()}-B`;
@@ -31,9 +32,11 @@ test.describe('@api Sites validation & filtering', () => {
     }
   });
 
-  test('Filters by scheme_id returns sites in that scheme', async ({ sites, schemes }) => {
-    const parent = await schemes.create(makeSchemePayload());
-    const other = await schemes.create(makeSchemePayload());
+  test('Filters by scheme_id returns sites in that scheme', async ({ sites, schemes, api }) => {
+    const parentPayload = await makeSchemePayload(api);
+    const otherPayload = await makeSchemePayload(api);
+    const parent = await schemes.create(parentPayload);
+    const other = await schemes.create(otherPayload);
     let s1: any, s2: any;
     try {
       s1 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(parent.id) }));
@@ -49,8 +52,9 @@ test.describe('@api Sites validation & filtering', () => {
     }
   });
 
-  test('Filters by financial_code returns matching site', async ({ sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('Filters by financial_code returns matching site', async ({ sites, schemes, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     let created: any;
     try {
       const finCode = `FIN_${Date.now()}`;
@@ -64,8 +68,9 @@ test.describe('@api Sites validation & filtering', () => {
     }
   });
 
-  test('Filters by land_use_id returns the created site', async ({ sites, schemes, lookups }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('Filters by land_use_id returns the created site', async ({ sites, schemes, lookups, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     let created: any;
     try {
       const landUses = await lookups.landUses();
@@ -81,8 +86,9 @@ test.describe('@api Sites validation & filtering', () => {
     }
   });
 
-  test('Filters by ids returns selected sites', async ({ sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('Filters by ids returns selected sites', async ({ sites, schemes, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     let a: any, b: any;
     try {
       a = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
@@ -157,8 +163,9 @@ test.describe('@api Sites create validation', () => {
     });
   }
 
-  test('Create without imported defaults imported=false', async ({ schemes, sites }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('Create without imported defaults imported=false', async ({ schemes, sites, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     let created: any;
     try {
       const payload = makeSiteCreatePayload({ scheme_id: Number(scheme.id) });
@@ -191,8 +198,9 @@ test.describe('@api Sites update validation', () => {
   ] as const;
 
   for (const field of nullableFields) {
-    test(`Update allows ${field}=null (per contract)`, async ({ sites, schemes }) => {
-      const scheme = await schemes.create(makeSchemePayload());
+    test(`Update allows ${field}=null (per contract)`, async ({ sites, schemes, api }) => {
+      const schemePayload = await makeSchemePayload(api);
+      const scheme = await schemes.create(schemePayload);
       const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
       try {
         const updated = await sites.update(created.id, { [field]: null } as any);
@@ -213,7 +221,8 @@ test.describe('@api Sites update validation', () => {
 
   for (const { name, body } of invalidUpdates) {
     test(`Update rejected (400): ${name}`, async ({ api, sites, schemes }) => {
-      const scheme = await schemes.create(makeSchemePayload());
+      const schemePayload = await makeSchemePayload(api);
+      const scheme = await schemes.create(schemePayload);
       const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
       try {
         const res = await api.put(`/sites/${created.id}`, { data: body as any });
@@ -226,7 +235,8 @@ test.describe('@api Sites update validation', () => {
   }
 
   test('Update with empty body leaves record unchanged', async ({ api, sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     try {
       const updateRes = await api.put(`/sites/${created.id}`, { data: {} });
@@ -269,8 +279,9 @@ test.describe('@api Sites param validation', () => {
 // History endpoint (params + pagination)
 // ---------------------------
 test.describe('@api Sites history validation', () => {
-  test('History returns data for valid id (may be empty)', async ({ sites, schemes }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+  test('History returns data for valid id (may be empty)', async ({ sites, schemes, api }) => {
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     try {
       const hist = await sites.history(created.id);
@@ -289,7 +300,8 @@ test.describe('@api Sites history validation', () => {
   }
 
   test('History paginates with valid params; rejects invalid (400)', async ({ sites, schemes, api }) => {
-    const scheme = await schemes.create(makeSchemePayload());
+    const schemePayload = await makeSchemePayload(api);
+    const scheme = await schemes.create(schemePayload);
     const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     try {
       const ok = await api.get(`/sites/${created.id}/history`, { params: { page: 1, limit: 1 } });
@@ -317,7 +329,8 @@ test.describe('@api Sites contacts validation', () => {
 
   for (const { name, body } of invalidSiteContactBodies) {
     test(`Contact create rejected (400): ${name}`, async ({ sites, schemes, api }) => {
-      const scheme = await schemes.create(makeSchemePayload());
+      const schemePayload = await makeSchemePayload(api);
+      const scheme = await schemes.create(schemePayload);
       const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
       try {
         const res = await api.post(`/sites/${created.id}/contacts`, { data: body as any });

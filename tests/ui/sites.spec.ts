@@ -10,7 +10,7 @@ const siteName = generateUniqueName();
 let createdSchemeId: number | string;
 let createdSiteId: number | string;
 
-test('@ui @sam Create Site under Scheme', async ({
+test('@ui Create Site under Scheme', async ({
   context,
   portalWelcome,
   portalNavbar,
@@ -25,6 +25,7 @@ test('@ui @sam Create Site under Scheme', async ({
       const created = await schemes.create({
         display_name: schemeName,
         description: 'Created for UI site test',
+        status_id: 79,
       });
 
       createdSchemeId = created.id;
