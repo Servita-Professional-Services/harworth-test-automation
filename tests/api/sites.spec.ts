@@ -73,12 +73,12 @@ test.describe('@api Sites validation & filtering', () => {
     const scheme = await schemes.create(schemePayload);
     let created: any;
     try {
-      const landUses = await lookups.landUses();
-      const land_use_id = landUses[0]?.id != null ? Number(landUses[0].id) : undefined;
+      const sector = await lookups.sector();
+      const sector_id = sector[0]?.id != null ? Number(sector[0].id) : undefined;
 
-      created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), land_use_id }));
+      created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), sector_id }));
 
-      const rows = await sites.list({ land_use_id, phase: 'opportunity', page: 1, limit: 50 });
+      const rows = await sites.list({ sector_id, phase: 'opportunity', page: 1, limit: 50 });
       expectIdsContain(rows, created.id);
     } finally {
       if (created) await sites.delete(created.id);

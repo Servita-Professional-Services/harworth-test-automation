@@ -6,7 +6,7 @@ export type Site = {
   displayName?: string;
   financial_code?: string;
   scheme_id?: number;
-  land_use_id?: number;
+  sector_id?: number;
   location_id?: number;
   status_id?: number;
   imported?: boolean;
@@ -16,7 +16,7 @@ export type SitesQuery = {
   display_name?: string;
   scheme_id?: number;
   financial_code?: string;
-  land_use_id?: number;
+  sector_id?: number;
   location_id?: number;
   ids?: Array<number | string>;
   phase?: 'opportunity' | 'site';
@@ -29,7 +29,7 @@ export type CreateSite = {
   description?: string;
   financial_code?: string;
   imported?: boolean;
-  land_use_id?: number;
+  sector_id?: number;
   location_id?: number;
   scheme_id?: number;
   address?: string;
@@ -44,7 +44,7 @@ export type UpdateSite = {
   description?: string | null;
   financial_code?: string | null;
   imported?: boolean | null;
-  land_use_id?: number | null;
+  sector_id?: number | null;
   location_id?: number | null;
   scheme_id?: number | null;
   address?: string | null;

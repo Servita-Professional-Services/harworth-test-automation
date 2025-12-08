@@ -72,9 +72,9 @@ test.describe('@api Land Units — create validation', () => {
     const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
-    const landUses = await lookups.landUses();
+    const sectors = await lookups.sector();
 
-    const payload = makeLandUnitPayload({ divStrategies, landUses, site });
+    const payload = makeLandUnitPayload({ divStrategies, sectors, site });
     let created: any;
     try {
       created = await landUnits.create(payload);
@@ -96,7 +96,7 @@ test.describe('@api Land Units — update validation', () => {
     const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
-    const landUses = await lookups.landUses();
+    const landUses = await lookups.sector();
     const payload = makeLandUnitPayload({ divStrategies, landUses, site });
     const created = await landUnits.create(payload);
 
@@ -114,7 +114,7 @@ test.describe('@api Land Units — update validation', () => {
     const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
-    const landUses = await lookups.landUses();
+    const landUses = await lookups.sector();
     const payload = makeLandUnitPayload({ divStrategies, landUses, site });
     const created = await landUnits.create(payload);
 
@@ -133,7 +133,7 @@ test.describe('@api Land Units — delete & history', () => {
     const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
-    const landUses = await lookups.landUses();
+    const landUses = await lookups.sector();
     const payload = makeLandUnitPayload({ divStrategies, landUses, site });
     const created = await landUnits.create(payload);
 
@@ -148,8 +148,8 @@ test.describe('@api Land Units — delete & history', () => {
     const scheme = await schemes.create(schemePayload);
     const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
     const divStrategies = await lookups.divestmentStrategies();
-    const landUses = await lookups.landUses();
-    const payload = makeLandUnitPayload({ divStrategies, landUses, site });
+    const sector = await lookups.sector();
+    const payload = makeLandUnitPayload({ divStrategies, sector, site });
     const created = await landUnits.create(payload);
 
     const history = await landUnits.history(created.id);

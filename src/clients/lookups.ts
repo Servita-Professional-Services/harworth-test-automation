@@ -3,7 +3,7 @@ import type { APIRequestContext, APIResponse } from '@playwright/test';
 export type LookupType =
   // consolidated
   | 'contact-type'
-  | 'land-use'
+  | 'sector'
   | 'divestment-strategy'
   | 'opportunity-source'
   | 'existing-use'
@@ -31,7 +31,7 @@ export type LookupParams = Record<string, string | number | boolean | undefined>
 
 export const CONSOLIDATED_LOOKUP_TYPES: LookupType[] = [
   'contact-type',
-  //'land-use',
+  'sector',
   'divestment-strategy',
   'opportunity-source',
   'existing-use',
@@ -85,7 +85,7 @@ export class LookupsClient {
   // ---------------------------
   // Convenience wrappers
   // ---------------------------
-  landUses() { return this.get('land-use'); }
+  sector() { return this.get('sector'); }
   divestmentStrategies() { return this.get('divestment-strategy'); }
   statuses(opts?: LookupParams) { return this.get('statuses', opts); }
   sites(opts?: LookupParams) { return this.get('sites', opts); }
