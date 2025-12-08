@@ -34,6 +34,22 @@ test.describe('@api Lookups — contract', () => {
       expect(typeof r.display_name).toBe('string');
     }
   });
+
+  test('GET /lookups?lookup_type=scheme_status — items expose { id:number, display_name:string }', async ({ api }) => {
+    const res = await api.get('/lookups', {
+      params: { lookup_type: 'scheme_status' },
+    });
+
+    expect(res.status()).toBe(200);
+
+    const rows = await res.json();
+    expect(Array.isArray(rows)).toBe(true);
+
+    for (const r of rows as Array<any>) {
+      expect(typeof r.id).toBe('number');
+      expect(typeof r.display_name).toBe('string');
+    }
+  });
 });
 
 // ---------------------------
