@@ -6,6 +6,12 @@ export type Site = {
   displayName?: string;
   financial_code?: string;
   scheme_id?: number;
+  scheme?: {
+    id: number | string;
+    display_name?: string;
+    displayName?: string;
+  };
+
   sector_id?: number;
   location_id?: number;
   status_id?: number;
