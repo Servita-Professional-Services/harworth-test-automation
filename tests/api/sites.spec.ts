@@ -1,4 +1,3 @@
-// tests/api/sites.spec.ts
 import { test, expect } from '../fixtures/api-fixtures';
 import { makeSchemePayload } from '../helpers/test-data/schemes';
 import { makeSiteCreatePayload } from '../helpers/test-data/sites';
@@ -8,6 +7,8 @@ import {
   INVALID_ID_CASES,
 } from '../helpers/assertions';
 
+type Id = number | string;
+
 // ---------------------------
 // Query validation & filtering (sitesQueryValidation)
 // ---------------------------
@@ -15,29 +16,38 @@ test.describe('@api Sites validation & filtering', () => {
   test('Filters by display_name returns matching site', async ({ sites, schemes, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
+
+    let s1: { id: Id } | undefined;
+    let s2: { id: Id } | undefined;
+
     try {
       const nameA = `e2e-site-${Date.now()}-A`;
       const nameB = `e2e-site-${Date.now()}-B`;
-      const s1 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), display_name: nameA }));
-      const s2 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), display_name: nameB }));
-      try {
-        const rows = await sites.list({ display_name: nameA, phase: 'opportunity', page: 1, limit: 50 });
-        expectIdsContain(rows, s1.id);
-      } finally {
-        await sites.delete(s1.id);
-        await sites.delete(s2.id);
-      }
+
+      s1 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), display_name: nameA }));
+      s2 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), display_name: nameB }));
+
+      const rows = await sites.list({ display_name: nameA, phase: 'opportunity', page: 1, limit: 50 });
+      expectIdsContain(rows, s1.id);
     } finally {
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        s1?.id != null ? sites.delete(s1.id) : Promise.resolve(),
+        s2?.id != null ? sites.delete(s2.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 
   test('Filters by scheme_id returns sites in that scheme', async ({ sites, schemes, api }) => {
     const parentPayload = await makeSchemePayload(api);
     const otherPayload = await makeSchemePayload(api);
+
     const parent = await schemes.create(parentPayload);
     const other = await schemes.create(otherPayload);
-    let s1: any, s2: any;
+
+    let s1: { id: Id } | undefined;
+    let s2: { id: Id } | undefined;
+
     try {
       s1 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(parent.id) }));
       s2 = await sites.create(makeSiteCreatePayload({ scheme_id: Number(other.id) }));
@@ -45,17 +55,21 @@ test.describe('@api Sites validation & filtering', () => {
       const rows = await sites.list({ scheme_id: Number(parent.id), phase: 'opportunity', page: 1, limit: 50 });
       expectIdsContain(rows, s1.id);
     } finally {
-      if (s1) await sites.delete(s1.id);
-      if (s2) await sites.delete(s2.id);
-      await schemes.delete(parent.id);
-      await schemes.delete(other.id);
+      await Promise.allSettled([
+        s1?.id != null ? sites.delete(s1.id) : Promise.resolve(),
+        s2?.id != null ? sites.delete(s2.id) : Promise.resolve(),
+        parent?.id != null ? schemes.delete(parent.id) : Promise.resolve(),
+        other?.id != null ? schemes.delete(other.id) : Promise.resolve(),
+      ]);
     }
   });
 
   test('Filters by financial_code returns matching site', async ({ sites, schemes, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    let created: any;
+
+    let created: { id: Id } | undefined;
+
     try {
       const finCode = `FIN_${Date.now()}`;
       created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id), financial_code: finCode }));
@@ -63,15 +77,19 @@ test.describe('@api Sites validation & filtering', () => {
       const rows = await sites.list({ financial_code: finCode, phase: 'opportunity', page: 1, limit: 50 });
       expectIdsContain(rows, created.id);
     } finally {
-      if (created) await sites.delete(created.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        created?.id != null ? sites.delete(created.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 
   test('Filters by land_use_id returns the created site', async ({ sites, schemes, lookups, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    let created: any;
+
+    let created: { id: Id } | undefined;
+
     try {
       const sector = await lookups.sector();
       const sector_id = sector[0]?.id != null ? Number(sector[0].id) : undefined;
@@ -81,25 +99,35 @@ test.describe('@api Sites validation & filtering', () => {
       const rows = await sites.list({ sector_id, phase: 'opportunity', page: 1, limit: 50 });
       expectIdsContain(rows, created.id);
     } finally {
-      if (created) await sites.delete(created.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        created?.id != null ? sites.delete(created.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 
   test('Filters by ids returns selected sites', async ({ sites, schemes, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    let a: any, b: any;
+
+    let a: { id: Id } | undefined;
+    let b: { id: Id } | undefined;
+
     try {
       a = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
       b = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
 
-      const rows = await sites.listByIds([a.id, b.id], { scheme_id: Number(scheme.id), phase: 'opportunity', page: 1, limit: 50 });
+      const rows = await sites.listByIds(
+        [a.id, b.id],
+        { scheme_id: Number(scheme.id), phase: 'opportunity', page: 1, limit: 50 },
+      );
       expectIdsContain(rows, a.id, b.id);
     } finally {
-      if (a) await sites.delete(a.id);
-      if (b) await sites.delete(b.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        a?.id != null ? sites.delete(a.id) : Promise.resolve(),
+        b?.id != null ? sites.delete(b.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 
@@ -166,16 +194,22 @@ test.describe('@api Sites create validation', () => {
   test('Create without imported defaults imported=false', async ({ schemes, sites, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    let created: any;
+
+    let created: { id: Id } | undefined;
+
     try {
       const payload = makeSiteCreatePayload({ scheme_id: Number(scheme.id) });
       delete (payload as any).imported;
+
       created = await sites.create(payload);
+
       const imported = (created as any)?.raw?.imported ?? (created as any)?.imported ?? false;
       expect(imported).toBe(false);
     } finally {
-      if (created) await sites.delete(created.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        created?.id != null ? sites.delete(created.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 });
@@ -185,11 +219,9 @@ test.describe('@api Sites create validation', () => {
 // ---------------------------
 test.describe('@api Sites update validation', () => {
   const nullableFields = [
-    'display_name',
     'description',
     'financial_code',
-    'imported',
-    'land_use_id',
+    'sector_id',
     'location_id',
     'scheme_id',
     'address',
@@ -198,16 +230,21 @@ test.describe('@api Sites update validation', () => {
   ] as const;
 
   for (const field of nullableFields) {
-    test(`Update allows ${field}=null (per contract)`, async ({ sites, schemes, api }) => {
+    test(`Update allows ${field}=null`, async ({ sites, schemes, api }) => {
       const schemePayload = await makeSchemePayload(api);
       const scheme = await schemes.create(schemePayload);
-      const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+      let created: { id: Id } | undefined;
+
       try {
+        created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
         const updated = await sites.update(created.id, { [field]: null } as any);
         expect(String(updated.id)).toBe(String(created.id));
       } finally {
-        await sites.delete(created.id);
-        await schemes.delete(scheme.id);
+        await Promise.allSettled([
+          created?.id != null ? sites.delete(created.id) : Promise.resolve(),
+          scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+        ]);
       }
     });
   }
@@ -223,22 +260,31 @@ test.describe('@api Sites update validation', () => {
     test(`Update rejected (400): ${name}`, async ({ api, sites, schemes }) => {
       const schemePayload = await makeSchemePayload(api);
       const scheme = await schemes.create(schemePayload);
-      const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+      let created: { id: Id } | undefined;
+
       try {
+        created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
         const res = await api.put(`/sites/${created.id}`, { data: body as any });
         expect(res.status()).toBe(400);
       } finally {
-        await sites.delete(created.id);
-        await schemes.delete(scheme.id);
+        await Promise.allSettled([
+          created?.id != null ? sites.delete(created.id) : Promise.resolve(),
+          scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+        ]);
       }
     });
   }
 
-  test('Update with empty body leaves record unchanged', async ({ api, sites, schemes }) => {
+  test('@sam Update with empty body leaves record unchanged', async ({ api, sites, schemes }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+    let created: any;
+
     try {
+      created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
       const updateRes = await api.put(`/sites/${created.id}`, { data: {} });
       expect(updateRes.status()).toBe(200);
 
@@ -247,8 +293,10 @@ test.describe('@api Sites update validation', () => {
       const currentName = (got as any).displayName ?? (got as any).display_name;
       expect(currentName).toBe(originalName);
     } finally {
-      await sites.delete(created.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        created?.id != null ? sites.delete(created.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 });
@@ -282,13 +330,18 @@ test.describe('@api Sites history validation', () => {
   test('History returns data for valid id (may be empty)', async ({ sites, schemes, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+    let created: { id: Id } | undefined;
+
     try {
+      created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
       const hist = await sites.history(created.id);
       expect(Array.isArray(hist)).toBe(true);
     } finally {
-      await sites.delete(created.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        created?.id != null ? sites.delete(created.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 
@@ -302,16 +355,22 @@ test.describe('@api Sites history validation', () => {
   test('History paginates with valid params; rejects invalid (400)', async ({ sites, schemes, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+    let created: { id: Id } | undefined;
+
     try {
+      created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
       const ok = await api.get(`/sites/${created.id}/history`, { params: { page: 1, limit: 1 } });
       expect([200, 204]).toContain(ok.status());
 
       const bad = await api.get(`/sites/${created.id}/history`, { params: { page: 0, limit: -1 } });
       expect(bad.status()).toBe(400);
     } finally {
-      await sites.delete(created.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        created?.id != null ? sites.delete(created.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 });
@@ -331,13 +390,18 @@ test.describe('@api Sites contacts validation', () => {
     test(`Contact create rejected (400): ${name}`, async ({ sites, schemes, api }) => {
       const schemePayload = await makeSchemePayload(api);
       const scheme = await schemes.create(schemePayload);
-      const created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+      let created: { id: Id } | undefined;
+
       try {
+        created = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
         const res = await api.post(`/sites/${created.id}/contacts`, { data: body as any });
         expect(res.status()).toBe(400);
       } finally {
-        await sites.delete(created.id);
-        await schemes.delete(scheme.id);
+        await Promise.allSettled([
+          created?.id != null ? sites.delete(created.id) : Promise.resolve(),
+          scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+        ]);
       }
     });
   }

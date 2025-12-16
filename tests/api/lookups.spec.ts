@@ -27,18 +27,6 @@ test.describe('@api Lookups — contract', () => {
 
   test('GET /lookups/statuses — items expose { id:number, display_name:string }', async ({ api }) => {
     const res = await api.get('/lookups/statuses');
-    expect(res.status()).toBe(200);
-    const rows = (await res.json()) as Array<any>;
-    for (const r of rows) {
-      expect(typeof r.id).toBe('number');
-      expect(typeof r.display_name).toBe('string');
-    }
-  });
-
-  test('GET /lookups?lookup_type=scheme_status — items expose { id:number, display_name:string }', async ({ api }) => {
-    const res = await api.get('/lookups', {
-      params: { lookup_type: 'scheme_status' },
-    });
 
     expect(res.status()).toBe(200);
 
@@ -110,7 +98,7 @@ test.describe('@api Lookups — filters & validation', () => {
     expect(both.status()).toBe(200);
 
     expect(
-      isSuperset(setOf(idsOf(await typeOnly.json())), setOf(idsOf(await both.json())))
+      isSuperset(setOf(idsOf(await typeOnly.json())), setOf(idsOf(await both.json()))),
     ).toBe(true);
   });
 

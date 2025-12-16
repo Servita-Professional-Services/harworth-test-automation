@@ -40,7 +40,7 @@ export type CreateSite = {
   scheme_id?: number;
   address?: string;
   post_code?: string;
-  status_id?: string;
+  status_id?: number;
   lead_contact_id?: string;
   comment?: string;
 };
@@ -93,15 +93,39 @@ export class SitesClient {
     return this.list({ ...extra, ids });
   }
 
-  async get(id: number | string): Promise<Site> {
-    const res = await this.api.get(`/sites/${id}`);
-    await this.#expectStatus(res, 'get site', [200]);
-    return res.json();
+async get(id: number | string): Promise<Site> {
+  const res = await this.api.get(`/sites/${id}`);
+  await this.#expectStatus(res, 'get site', [200]);
+  const body = await res.json();
+
+  if (Array.isArray(body)) {
+    if (!body.length) throw new Error(`get site failed: empty array returned for id=${id}`);
+    return body[0] as Site;
   }
+
+  if (body && typeof body === 'object') {
+    for (const key of ['data', 'item', 'result', 'site']) {
+      const v = (body as any)[key];
+      if (v) {
+        if (Array.isArray(v)) return v[0] as Site;
+        return v as Site;
+      }
+    }
+  }
+  return body as Site;
+}
 
   async create(payload: CreateSite): Promise<Site> {
     const res = await this.api.post('/sites', { data: payload });
-    await this.#expectStatus(res, 'create site', [200, 201]);
+  
+    if (![200, 201].includes(res.status())) {
+      const text = await res.text().catch(() => '');
+      throw new Error(
+        `create site failed: ${res.status()} — ${text}\n` +
+        `Request body: ${JSON.stringify(payload, null, 2)}`
+      );
+    }
+  
     return res.json();
   }
 

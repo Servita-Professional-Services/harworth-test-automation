@@ -7,7 +7,7 @@ const schemeName = generateUniqueName();
 const schemeDescription = 'Testing';
 let createdSchemeId: string | number;
 
-test('@ui @sam Create and Update Scheme via Portal', async ({
+test('@ui Create and Update Scheme via Portal', async ({
   context,
   portalWelcome,
   portalNavbar,
