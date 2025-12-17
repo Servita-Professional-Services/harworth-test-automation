@@ -1,12 +1,8 @@
 import { test, expect, request } from '../fixtures/api-fixtures';
-import {
-  INVALID_ID_CASES,
-} from '../helpers/assertions';
+import { INVALID_ID_CASES } from '../helpers/assertions';
 import { makeSchemePayload } from '../helpers/test-data/schemes';
 import { makeSiteCreatePayload } from '../helpers/test-data/sites';
-import {
-  makeOpportunityMetadataNullPayload,
-} from '../helpers/test-data/opportunity-metadata';
+import { makeOpportunityMetadataNullPayload } from '../helpers/test-data/opportunity-metadata';
 
 // ---------------------------
 // Contract (GET)
@@ -14,20 +10,27 @@ import {
 test.describe('@api Opportunity Metadata — contract', () => {
   test('GET /sites/:id/opportunity-metadata returns 200 and valid object', async ({ api, sites, schemes }) => {
     const schemePayload = await makeSchemePayload(api);
-    const scheme = await schemes.create(schemePayload);
-    const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+    let scheme: any;
+    let site: any;
 
     try {
+      scheme = await schemes.create(schemePayload);
+      site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
       const res = await api.get(`/sites/${site.id}/opportunity-metadata`);
       const status = res.status();
       expect(status).toBe(200);
+
       const body = await res.json().catch(() => ({}));
       expect(typeof body).toBe('object');
       expect(body).not.toBeNull();
       expect(Object.keys(body).length).toBeGreaterThan(0);
     } finally {
-      await sites.delete(site.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        site?.id != null ? sites.delete(site.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 });
@@ -38,10 +41,14 @@ test.describe('@api Opportunity Metadata — contract', () => {
 test.describe('@api Opportunity Metadata — update validation', () => {
   test('PUT rejects invalid field values with 400', async ({ api, sites, schemes }) => {
     const schemePayload = await makeSchemePayload(api);
-    const scheme = await schemes.create(schemePayload);
-    const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+    let scheme: any;
+    let site: any;
 
     try {
+      scheme = await schemes.create(schemePayload);
+      site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
       const invalidCases = [
         { name: 'opportunity_source_id not positive', body: { opportunity_source_id: 0 } },
         { name: 'data_centre_potential invalid enum', body: { data_centre_potential: 'maybe' } },
@@ -55,20 +62,27 @@ test.describe('@api Opportunity Metadata — update validation', () => {
         expect(res.status(), c.name).toBe(400);
       }
     } finally {
-      await sites.delete(site.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        site?.id != null ? sites.delete(site.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 
   test('PUT accepts nulls for all optional fields', async ({ api, sites, schemes }) => {
     const schemePayload = await makeSchemePayload(api);
-    const scheme = await schemes.create(schemePayload);
-    const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+    let scheme: any;
+    let site: any;
 
     try {
+      scheme = await schemes.create(schemePayload);
+      site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
       const res = await api.put(`/sites/${site.id}/opportunity-metadata`, {
         data: makeOpportunityMetadataNullPayload(),
       });
+
       if ([403, 404, 501].includes(res.status())) test.skip(true, `Feature not available (status ${res.status()}).`);
       expect(res.status()).toBe(200);
 
@@ -79,20 +93,27 @@ test.describe('@api Opportunity Metadata — update validation', () => {
       expect((body?.opportunity_source_id ?? null)).toBeNull();
       expect((body?.data_centre_potential ?? null)).toBeNull();
     } finally {
-      await sites.delete(site.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        site?.id != null ? sites.delete(site.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 
   test('PUT accepts valid lookup IDs and updates fields successfully', async ({ api, lookups, sites, schemes }) => {
     const schemePayload = await makeSchemePayload(api);
-    const scheme = await schemes.create(schemePayload);
-    const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+    let scheme: any;
+    let site: any;
 
     try {
+      scheme = await schemes.create(schemePayload);
+      site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
       const baseRes = await api.put(`/sites/${site.id}/opportunity-metadata`, {
         data: { off_market: true, green_belt: false, data_centre_potential: 'no' },
       });
+
       if ([403, 404, 501].includes(baseRes.status()))
         test.skip(true, `Feature not available (status ${baseRes.status()}).`);
       expect(baseRes.status()).toBe(200);
@@ -117,9 +138,14 @@ test.describe('@api Opportunity Metadata — update validation', () => {
         expect([200, 204]).toContain(res.status());
       }
     } finally {
-      await api.put(`/sites/${site.id}/opportunity-metadata`, { data: makeOpportunityMetadataNullPayload() }).catch(() => {});
-      await sites.delete(site.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        // keep this behaviour but ensure it never blocks deletes
+        site?.id != null
+          ? api.put(`/sites/${site.id}/opportunity-metadata`, { data: makeOpportunityMetadataNullPayload() })
+          : Promise.resolve(),
+        site?.id != null ? sites.delete(site.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 });

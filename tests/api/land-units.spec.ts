@@ -1,9 +1,5 @@
 import { test, expect } from '../fixtures/api-fixtures';
-import {
-  expectAtMostN,
-  INVALID_ID_CASES,
-  expectDeleted,
-} from '../helpers/assertions';
+import { expectAtMostN, INVALID_ID_CASES, expectDeleted } from '../helpers/assertions';
 import { makeSchemePayload } from '../helpers/test-data/schemes';
 import { makeSiteCreatePayload } from '../helpers/test-data/sites';
 import { makeLandUnitPayload } from '../helpers/test-data/land-units';
@@ -22,11 +18,7 @@ test.describe('@api Land Units — query validation & filtering', () => {
   }
 
   test('GET /land-units rejects invalid pagination parameters (400)', async ({ api }) => {
-    for (const params of [
-      { page: 0, limit: 1 },
-      { page: 1, limit: -1 },
-      { page: 'x', limit: 1 },
-    ]) {
+    for (const params of [{ page: 0, limit: 1 }, { page: 1, limit: -1 }, { page: 'x', limit: 1 }]) {
       const res = await api.get('/land-units', { params });
       expect(res.status()).toBe(400);
     }
@@ -70,22 +62,29 @@ test.describe('@api Land Units — create validation', () => {
   test('@api POST /land-units creates a land unit successfully with valid data', async ({ landUnits, lookups, sites, schemes, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
-    const divStrategies = await lookups.divestmentStrategies();
-    const sectors = await lookups.sector();
 
-    const payload = makeLandUnitPayload({ divStrategies, sectors, site });
+    let site: any;
     let created: any;
+
     try {
+      site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+      const divStrategies = await lookups.divestmentStrategies();
+      const sectors = await lookups.sector();
+
+      const payload = makeLandUnitPayload({ divStrategies, sectors, site });
+
       created = await landUnits.create(payload);
       expect(created.id).toBeDefined();
 
       const got = await landUnits.get(created.id);
       expect(String(got.id)).toBe(String(created.id));
     } finally {
-      if (created) await landUnits.delete(created.id);
-      await sites.delete(site.id);
-      await schemes.delete(scheme.id);
+      await Promise.allSettled([
+        created?.id != null ? landUnits.delete(created.id) : Promise.resolve(),
+        site?.id != null ? sites.delete(site.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
     }
   });
 });
@@ -94,36 +93,56 @@ test.describe('@api Land Units — update validation', () => {
   test('PUT /land-units rejects invalid unit_of_measure (400)', async ({ landUnits, lookups, sites, schemes, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
-    const divStrategies = await lookups.divestmentStrategies();
-    const landUses = await lookups.sector();
-    const payload = makeLandUnitPayload({ divStrategies, landUses, site });
-    const created = await landUnits.create(payload);
 
-    const invalidUpdate = { unit_of_measure: 'invalid' };
-    const res = await landUnits.api.put(`/land-units/${created.id}`, { data: invalidUpdate });
-    expect(res.status()).toBe(400);
+    let site: any;
+    let created: any;
 
-    await landUnits.delete(created.id);
-    await sites.delete(site.id);
-    await schemes.delete(scheme.id);
+    try {
+      site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+      const divStrategies = await lookups.divestmentStrategies();
+      const landUses = await lookups.sector();
+      const payload = makeLandUnitPayload({ divStrategies, landUses, site });
+
+      created = await landUnits.create(payload);
+
+      const invalidUpdate = { unit_of_measure: 'invalid' };
+      const res = await landUnits.api.put(`/land-units/${created.id}`, { data: invalidUpdate });
+      expect(res.status()).toBe(400);
+    } finally {
+      await Promise.allSettled([
+        created?.id != null ? landUnits.delete(created.id) : Promise.resolve(),
+        site?.id != null ? sites.delete(site.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
+    }
   });
 
   test('PUT /land-units updates successfully with valid data', async ({ landUnits, lookups, sites, schemes, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
-    const divStrategies = await lookups.divestmentStrategies();
-    const landUses = await lookups.sector();
-    const payload = makeLandUnitPayload({ divStrategies, landUses, site });
-    const created = await landUnits.create(payload);
 
-    const updated = await landUnits.update(created.id, { measure: 999 });
-    expect(updated.measure).toBe(999);
+    let site: any;
+    let created: any;
 
-    await landUnits.delete(created.id);
-    await sites.delete(site.id);
-    await schemes.delete(scheme.id);
+    try {
+      site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+      const divStrategies = await lookups.divestmentStrategies();
+      const landUses = await lookups.sector();
+      const payload = makeLandUnitPayload({ divStrategies, landUses, site });
+
+      created = await landUnits.create(payload);
+
+      const updated = await landUnits.update(created.id, { measure: 999 });
+      expect(updated.measure).toBe(999);
+    } finally {
+      await Promise.allSettled([
+        created?.id != null ? landUnits.delete(created.id) : Promise.resolve(),
+        site?.id != null ? sites.delete(site.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
+    }
   });
 });
 
@@ -131,32 +150,54 @@ test.describe('@api Land Units — delete & history', () => {
   test('DELETE /land-units deletes a created land unit successfully', async ({ landUnits, lookups, sites, schemes, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
-    const divStrategies = await lookups.divestmentStrategies();
-    const landUses = await lookups.sector();
-    const payload = makeLandUnitPayload({ divStrategies, landUses, site });
-    const created = await landUnits.create(payload);
 
-    await landUnits.delete(created.id);
-    await expectDeleted((ids) => landUnits.listByIds(ids), created.id);
-    await sites.delete(site.id);
-    await schemes.delete(scheme.id);
+    let site: any;
+    let created: any;
+
+    try {
+      site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+      const divStrategies = await lookups.divestmentStrategies();
+      const landUses = await lookups.sector();
+      const payload = makeLandUnitPayload({ divStrategies, landUses, site });
+
+      created = await landUnits.create(payload);
+
+      await landUnits.delete(created.id);
+      await expectDeleted((ids) => landUnits.listByIds(ids), created.id);
+    } finally {
+      await Promise.allSettled([
+        created?.id != null ? landUnits.delete(created.id) : Promise.resolve(),
+        site?.id != null ? sites.delete(site.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
+    }
   });
 
   test('GET /land-units/:id/history returns empty array for valid ID (no history yet)', async ({ landUnits, lookups, sites, schemes, api }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
-    const site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
-    const divStrategies = await lookups.divestmentStrategies();
-    const sector = await lookups.sector();
-    const payload = makeLandUnitPayload({ divStrategies, sector, site });
-    const created = await landUnits.create(payload);
 
-    const history = await landUnits.history(created.id);
-    expect(Array.isArray(history)).toBe(true);
+    let site: any;
+    let created: any;
 
-    await landUnits.delete(created.id);
-    await sites.delete(site.id);
-    await schemes.delete(scheme.id);
+    try {
+      site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
+
+      const divStrategies = await lookups.divestmentStrategies();
+      const sector = await lookups.sector();
+      const payload = makeLandUnitPayload({ divStrategies, sector, site });
+
+      created = await landUnits.create(payload);
+
+      const history = await landUnits.history(created.id);
+      expect(Array.isArray(history)).toBe(true);
+    } finally {
+      await Promise.allSettled([
+        created?.id != null ? landUnits.delete(created.id) : Promise.resolve(),
+        site?.id != null ? sites.delete(site.id) : Promise.resolve(),
+        scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),
+      ]);
+    }
   });
 });
