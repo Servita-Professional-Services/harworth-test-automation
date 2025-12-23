@@ -276,7 +276,7 @@ test.describe('@api Sites update validation', () => {
     });
   }
 
-  test('@sam Update with empty body leaves record unchanged', async ({ api, sites, schemes }) => {
+  test('Update with empty body leaves record unchanged', async ({ api, sites, schemes }) => {
     const schemePayload = await makeSchemePayload(api);
     const scheme = await schemes.create(schemePayload);
 

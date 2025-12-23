@@ -1,45 +1,90 @@
 import type { APIRequestContext } from '@playwright/test';
 import { generateRandomString } from '../generate-random-string';
 
-export interface AdminImportRow {
-  Scheme: string;
-  Site: string;
-  Financial_Code: string;
-  Description: string;
-  Postcode: string;
-  Lat: string;
-  Long: string;
-  'DM / AM / Playbook Owner': string[];
-  PM: null;
-  Planning: null;
-  'Functional Lead': string[];
-  'FBP contact': string[];
-  'Acquisitons lead': null;
-  Division: string;
-  'Resi/I&L/Hybrid': string;
-  'Ownership type': string;
+export interface SiteDataForProcessing {
+  display_name: string;
+  financial_code?: string | null;
+  description?: string | null;
+  post_code?: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  sector: string | null;
+  deal_structures: string[];
+  division: string | null;
+  sub_division: string | null;
+  scheme_name: string;
+  imported: boolean;
+  dm: string[];
+  pm: string[];
+  planner: string[];
+  fbp: string[];
+  al: string[];
+  fl: string[];
+  legal: string[];
 }
 
-export const makeAdminImportRow = async (
-  _api: APIRequestContext,
-): Promise<AdminImportRow> => {
-    const slug = `e2e-admin-import-${generateRandomString(8)}`;
+export interface SchemeDataForProcessing {
+  display_name: string;
+  description: string;
+  status: string | null;
+}
+
+export type AdminSchemesImportPayload = {
+  sites: SiteDataForProcessing[];
+  schemes: SchemeDataForProcessing[];
+};
+
+export const makeAdminImportSchemeRow = (slug: string): SchemeDataForProcessing => {
+  const schemeName = `e2e ${slug} (South Yorkshire)`;
   return {
-    Scheme: `e2e ${slug} (South Yorkshire)`,
-    Site: `e2e-site-${slug}`,
-    Financial_Code: slug,
-    Description: `e2e description ${slug}`,
-    Postcode: 'S60 5TR',
-    Lat: '53.3903',
-    Long: '-1.375424',
-    'DM / AM / Playbook Owner': ['James Watson'],
-    PM: null,
-    Planning: null,
-    'Functional Lead': ['Greg Moorhouse'],
-    'FBP contact': ['Catherine Givans'],
-    'Acquisitons lead': null,
-    Division: 'Core Investment Portfolio',
-    'Resi/I&L/Hybrid': 'I&L - IP',
-    'Ownership type': 'Freehold',
+    display_name: schemeName,
+    description: `e2e description ${slug}`,
+    status: 'Live',
+  };
+};
+
+export const makeAdminImportSiteRow = (slug: string, schemeName: string): SiteDataForProcessing => {
+  return {
+    display_name: `e2e-site-${slug}`,
+    financial_code: slug,
+    description: `e2e description ${slug}`,
+    post_code: 'S60 5TR',
+    latitude: '53.3903',
+    longitude: '-1.375424',
+    sector: 'I&L',
+    deal_structures: ['Freehold'],
+    division: 'ENC',
+    sub_division: null,
+    scheme_name: schemeName,
+    imported: true,
+    dm: ['James Watson'],
+    pm: [],
+    planner: [],
+    fbp: ['Catherine Givans'],
+    al: [],
+    fl: ['Greg Moorhouse'],
+    legal: [],
+  };
+};
+
+export const makeAdminImportPayload = async (_api: APIRequestContext) => {
+  const slug = `e2e-admin-import-${generateRandomString(8)}`;
+
+  const schemeRow = makeAdminImportSchemeRow(slug);
+  const siteRow = makeAdminImportSiteRow(slug, schemeRow.display_name);
+
+  const payload: AdminSchemesImportPayload = {
+    schemes: [schemeRow],
+    sites: [siteRow],
+  };
+
+  return {
+    payload,
+    slug,
+    schemeRow,
+    siteRow,
+    Scheme: schemeRow.display_name,
+    Site: siteRow.display_name,
+    Financial_Code: siteRow.financial_code!,
   };
 };
