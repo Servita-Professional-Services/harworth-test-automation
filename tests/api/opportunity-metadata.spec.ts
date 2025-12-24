@@ -19,8 +19,7 @@ test.describe('@api Opportunity Metadata — contract', () => {
       site = await sites.create(makeSiteCreatePayload({ scheme_id: Number(scheme.id) }));
 
       const res = await api.get(`/sites/${site.id}/opportunity-metadata`);
-      const status = res.status();
-      expect(status).toBe(200);
+      expect(res.status()).toBe(200);
 
       const body = await res.json().catch(() => ({}));
       expect(typeof body).toBe('object');
@@ -124,7 +123,6 @@ test.describe('@api Opportunity Metadata — update validation', () => {
         { name: 'planning-status', items: await lookups.get('planning-status'), field: 'planning_status_id' },
         { name: 'proposed-use', items: await lookups.get('proposed-use'), field: 'proposed_use_id' },
         { name: 'planning-timeframe', items: await lookups.get('planning-timeframe'), field: 'planning_timeframe_id' },
-        { name: 'deal-structure', items: await lookups.get('deal-structure'), field: 'deal_structure_id' },
       ];
 
       for (const { name, items, field } of lookupSets) {
@@ -139,9 +137,10 @@ test.describe('@api Opportunity Metadata — update validation', () => {
       }
     } finally {
       await Promise.allSettled([
-        // keep this behaviour but ensure it never blocks deletes
         site?.id != null
-          ? api.put(`/sites/${site.id}/opportunity-metadata`, { data: makeOpportunityMetadataNullPayload() })
+          ? api
+              .put(`/sites/${site.id}/opportunity-metadata`, { data: makeOpportunityMetadataNullPayload() })
+              .catch(() => undefined)
           : Promise.resolve(),
         site?.id != null ? sites.delete(site.id) : Promise.resolve(),
         scheme?.id != null ? schemes.delete(scheme.id) : Promise.resolve(),

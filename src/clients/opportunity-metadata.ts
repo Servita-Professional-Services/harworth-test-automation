@@ -3,7 +3,7 @@ import type { APIRequestContext, APIResponse } from '@playwright/test';
 export type OpportunityMetadataUpdate = {
   opportunity_source_id?: number | null;
   off_market?: boolean | null;
-  date_identified?: string | null; 
+  date_identified?: string | null;
   vendors_agent_id?: number | null;
   harworth_agent_id?: number | null;
   gross_acres?: number | null;
@@ -18,15 +18,17 @@ export type OpportunityMetadataUpdate = {
   employment_density?: number | null;
   housing_plots?: number | null;
   housing_density?: number | null;
-  deal_structure_id?: number | null;
-  overage_percent?: number | null;
-  target_price?: number | null;
-  harworth_legal_costs?: number | null;
-  total_pre_acquisition_spend?: number | null;
-  bid_deadline?: string | null;
-  exclusivity_end_date?: string | null;
-  cash_requirement_on_completion?: number | null;
-  target_purchase_date?: string | null;
+
+  // REMOVED from API:
+  // deal_structure_id?: number | null;
+  // overage_percent?: number | null;
+  // target_price?: number | null;
+  // harworth_legal_costs?: number | null;
+  // total_pre_acquisition_spend?: number | null;
+  // bid_deadline?: string | null;
+  // exclusivity_end_date?: string | null;
+  // cash_requirement_on_completion?: number | null;
+  // target_purchase_date?: string | null;
 };
 
 export class OpportunityMetadataClient {
@@ -38,7 +40,10 @@ export class OpportunityMetadataClient {
     return r.json();
   }
 
-  async update(siteId: number | string, payload: OpportunityMetadataUpdate): Promise<Record<string, unknown>> {
+  async update(
+    siteId: number | string,
+    payload: OpportunityMetadataUpdate,
+  ): Promise<Record<string, unknown>> {
     const r = await this.api.put(`/sites/${Number(siteId)}/opportunity-metadata`, { data: payload });
     await this.ensureOk(r, [200]);
     return r.json();

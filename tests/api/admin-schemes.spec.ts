@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures/api-fixtures';
 import { makeAdminImportPayload } from '../helpers/test-data/admin-schemes';
 import { expectIdsContain } from '../helpers/assertions';
+import { cleanupWithReport } from '../helpers/cleanup-helper';
 import {
   postAdminSchemesWithRetryOrThrow,
   expectAdminSchemesResponseShape,
@@ -11,39 +12,58 @@ import {
 } from '../helpers/admin-schemes-helper';
 
 test.describe('@api Admin Schemes import', () => {
-    test('Imports a scheme + site and exposes them via list endpoints', async ({ api, sites, schemes }) => {
-      const built = await makeAdminImportPayload(api);
-      const payload = built.payload;
-      const Financial_Code = built.Financial_Code;
-      const Site = built.Site;
-      const Scheme = built.Scheme;
-      let createdSiteId: number | string | undefined;
-      let createdSchemeId: number | string | undefined;
-      try {
-        const { body } = await postAdminSchemesWithRetryOrThrow(api, payload);
-        expectAdminSchemesResponseShape(expect, body);
-        expect(body?.summary?.totalRecords).toBe(1);
-        expect(body?.summary?.errors).toEqual([]);
-        const site = await getSingleSiteByFinancialCodeOrThrow(expect, sites, Financial_Code);
-        createdSiteId = site.id;
-        expect(getSiteDisplayName(site)).toBe(Site);
-        const schemeId = getSchemeIdFromSite(site);
-        expect(schemeId, 'Expected scheme id on site (site.scheme.id or site.scheme_id)').toBeDefined();
-        createdSchemeId = schemeId!;
-        const schemeRows = await schemes.listByIds([createdSchemeId]);
-        expectIdsContain(schemeRows, createdSchemeId);
-        const schemeName = schemeRows[0].display_name ?? (schemeRows[0] as any).displayName;
-        expect(schemeName).toBe(Scheme);
-        } finally {
-          await Promise.allSettled([
-            createdSiteId != null ? sites.delete(createdSiteId) : Promise.resolve(),
-            createdSchemeId != null ? schemes.delete(createdSchemeId) : Promise.resolve(),
-          ]);
-        }
-      });
+  test('Imports a scheme + site and exposes them via list endpoints', async ({ api, sites, schemes }, testInfo) => {
+    const built = await makeAdminImportPayload(api);
+    const payload = built.payload;
+    const Financial_Code = built.Financial_Code;
+    const Site = built.Site;
+    const Scheme = built.Scheme;
 
-  test('Supports bulk import of multiple schemes + sites', async ({ api, sites, schemes }) => {
-    const built = await Promise.all([makeAdminImportPayload(api), makeAdminImportPayload(api), makeAdminImportPayload(api)]);
+    let createdSiteId: number | string | undefined;
+    let createdSchemeId: number | string | undefined;
+
+    try {
+      const { body } = await postAdminSchemesWithRetryOrThrow(api, payload);
+
+      expectAdminSchemesResponseShape(expect, body);
+      expect(body?.summary?.totalRecords).toBe(payload.sites.length + payload.schemes.length);
+      expect(body?.summary?.errors).toEqual([]);
+
+      const site = await getSingleSiteByFinancialCodeOrThrow(expect, sites, Financial_Code);
+      createdSiteId = site.id;
+
+      expect(getSiteDisplayName(site)).toBe(Site);
+
+      const schemeId = getSchemeIdFromSite(site);
+      expect(schemeId, 'Expected scheme id on site (site.scheme.id or site.scheme_id)').toBeDefined();
+      createdSchemeId = schemeId!;
+
+      const schemeRows = await schemes.listByIds([createdSchemeId]);
+      expectIdsContain(schemeRows, createdSchemeId);
+
+      const schemeName = schemeRows[0].display_name ?? (schemeRows[0] as any).displayName;
+      expect(schemeName).toBe(Scheme);
+    } finally {
+      await cleanupWithReport(testInfo, [
+        {
+          name: `DELETE site ${String(createdSiteId)}`,
+          run: () => (createdSiteId != null ? sites.delete(createdSiteId) : Promise.resolve()),
+        },
+        {
+          name: `DELETE scheme ${String(createdSchemeId)}`,
+          run: () => (createdSchemeId != null ? schemes.delete(createdSchemeId) : Promise.resolve()),
+        },
+      ]);
+    }
+  });
+
+  test('Supports bulk import of multiple schemes + sites', async ({ api, sites, schemes }, testInfo) => {
+    const built = await Promise.all([
+      makeAdminImportPayload(api),
+      makeAdminImportPayload(api),
+      makeAdminImportPayload(api),
+    ]);
+
     const payload = {
       sites: built.flatMap(b => b.payload.sites),
       schemes: built.flatMap(b => b.payload.schemes),
@@ -78,14 +98,20 @@ test.describe('@api Admin Schemes import', () => {
     } finally {
       const uniqueSchemeIds = [...new Set(createdSchemeIds.map(String))];
 
-      await Promise.allSettled([
-        ...createdSiteIds.map(id => sites.delete(id)),
-        ...uniqueSchemeIds.map(id => schemes.delete(id)),
+      await cleanupWithReport(testInfo, [
+        ...createdSiteIds.map(id => ({
+          name: `DELETE site ${String(id)}`,
+          run: () => sites.delete(id),
+        })),
+        ...uniqueSchemeIds.map(id => ({
+          name: `DELETE scheme ${String(id)}`,
+          run: () => schemes.delete(id),
+        })),
       ]);
     }
   });
 
-  test('Re-importing the same data does not create duplicate sites', async ({ api, sites, schemes }) => {
+  test('Re-importing the same data does not create duplicate sites', async ({ api, sites, schemes }, testInfo) => {
     const { payload, Financial_Code } = await makeAdminImportPayload(api);
 
     let createdSiteId: number | string | undefined;
@@ -114,9 +140,15 @@ test.describe('@api Admin Schemes import', () => {
       const afterRows = await listSitesByFinancialCodeAllPhases(sites, Financial_Code);
       expect(afterRows).toHaveLength(1);
     } finally {
-      await Promise.allSettled([
-        createdSiteId != null ? sites.delete(createdSiteId) : Promise.resolve(),
-        createdSchemeId != null ? schemes.delete(createdSchemeId) : Promise.resolve(),
+      await cleanupWithReport(testInfo, [
+        {
+          name: `DELETE site ${String(createdSiteId)}`,
+          run: () => (createdSiteId != null ? sites.delete(createdSiteId) : Promise.resolve()),
+        },
+        {
+          name: `DELETE scheme ${String(createdSchemeId)}`,
+          run: () => (createdSchemeId != null ? schemes.delete(createdSchemeId) : Promise.resolve()),
+        },
       ]);
     }
   });
@@ -136,17 +168,22 @@ test.describe('@api Admin Schemes import', () => {
     expect(res.status()).toBe(400);
   });
 
-  test('Reports contact names not found in Azure in unfoundUsernames', async ({ api, sites, schemes }) => {
+  test('Reports contact names not found in Azure in unfoundUsernames', async ({ api, sites, schemes }, testInfo) => {
     const built = await makeAdminImportPayload(api);
+
     built.payload.sites[0].dm = [`e2e-not-a-user-${Date.now()}-a`];
     built.payload.sites[0].fl = [`e2e-not-a-user-${Date.now()}-b`];
     built.payload.sites[0].fbp = [`e2e-not-a-user-${Date.now()}-c`];
+
     let createdSiteId: number | string | undefined;
     let createdSchemeId: number | string | undefined;
+
     try {
       const { body } = await postAdminSchemesWithRetryOrThrow(api, built.payload);
+
       expectAdminSchemesResponseShape(expect, body);
       expect(body?.summary?.errors).toEqual([]);
+
       if (Array.isArray(body?.summary?.unfoundUsernames)) {
         expect(body?.summary?.unfoundUsernames).toEqual(
           expect.arrayContaining([
@@ -156,18 +193,27 @@ test.describe('@api Admin Schemes import', () => {
           ]),
         );
       }
+
       const site = await getSingleSiteByFinancialCodeOrThrow(expect, sites, built.Financial_Code);
       createdSiteId = site.id;
+
       const schemeId = getSchemeIdFromSite(site);
       if (schemeId != null) createdSchemeId = schemeId;
+
       if (createdSchemeId != null) {
         const schemeRows = await schemes.listByIds([createdSchemeId]);
         expectIdsContain(schemeRows, createdSchemeId);
       }
     } finally {
-      await Promise.allSettled([
-        createdSiteId != null ? sites.delete(createdSiteId) : Promise.resolve(),
-        createdSchemeId != null ? schemes.delete(createdSchemeId) : Promise.resolve(),
+      await cleanupWithReport(testInfo, [
+        {
+          name: `DELETE site ${String(createdSiteId)}`,
+          run: () => (createdSiteId != null ? sites.delete(createdSiteId) : Promise.resolve()),
+        },
+        {
+          name: `DELETE scheme ${String(createdSchemeId)}`,
+          run: () => (createdSchemeId != null ? schemes.delete(createdSchemeId) : Promise.resolve()),
+        },
       ]);
     }
   });

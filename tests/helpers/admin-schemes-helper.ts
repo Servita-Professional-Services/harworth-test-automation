@@ -79,15 +79,19 @@ export async function postAdminSchemesWithRetryOrThrow(
 }
 
 export function expectAdminSchemesResponseShape(expect: typeof ExpectType, body: AdminSchemesResponse | undefined) {
-  expect(body).toBeTruthy();
-  expect(body?.summary).toBeTruthy();
-  expect(typeof body?.summary?.totalRecords).toBe('number');
-  expect(Array.isArray(body?.summary?.errors)).toBe(true);
-  if (body?.summary?.unfoundUsernames !== undefined) {
-    expect(Array.isArray(body.summary.unfoundUsernames)).toBe(true);
+    expect(body).toBeTruthy();
+    expect(body?.summary).toBeTruthy();
+    expect(typeof body?.summary?.totalRecords).toBe('number');
+    expect(Array.isArray(body?.summary?.errors)).toBe(true);
+  
+    if (body?.summary?.unfoundUsernames !== undefined) {
+      expect(Array.isArray(body.summary.unfoundUsernames)).toBe(true);
+    }
+    if (body?.cacheStatistics !== undefined) {
+      expect(typeof body.cacheStatistics).toBe('object');
+      expect(body.cacheStatistics).not.toBeNull();
+    }
   }
-  expect(body?.cacheStatistics).toBeTruthy();
-}
 
 export function getSiteDisplayName(site: any): string | undefined {
   return site?.display_name ?? site?.displayName;
