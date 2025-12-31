@@ -137,12 +137,21 @@ export class PortalSchemeDirectory {
   // Filtering / Navigation
   // ---------------------------
 
+  private get schemeFilterListbox() {
+    return this.page.getByRole('listbox');
+  }
+  
   async selectSchemeByName(name: string) {
     await this.schemeFilterTrigger.click();
+    await expect(this.schemeFilterInput).toBeVisible();
     await this.schemeFilterInput.click();
-    await this.schemeFilterInput.fill(name);
+    await this.schemeFilterInput.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+    await this.schemeFilterInput.press('Backspace');
+    await this.schemeFilterInput.type(name, { delay: 30 });
+    await expect(this.schemeFilterListbox).toBeVisible();
+    await expect(this.schemeOption(name)).toBeVisible({ timeout: 10_000 });
     await this.schemeOption(name).click();
-    await expect(this.schemeFilterTrigger).toContainText(name);
+      await expect(this.schemeFilterTrigger).toContainText(name);
   }
 
   async openScheme(name: string) {

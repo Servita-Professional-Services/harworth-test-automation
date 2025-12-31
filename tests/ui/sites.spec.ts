@@ -1,14 +1,14 @@
 import { test, expect } from '../fixtures/ui-fixtures';
 import { generateUniqueName } from '../helpers/generate-random-string';
+import { makeSchemePayload } from '../helpers/test-data/schemes';
 
 const email = process.env.QA_PORTAL_LOGIN_EMAIL as string;
 const password = process.env.QA_PORTAL_LOGIN_PASSWORD as string;
 
-const schemeName = generateUniqueName();
 const siteName = generateUniqueName(); 
-
 let createdSchemeId: number | string;
 let createdSiteId: number | string;
+let schemeName: string;
 
 test('@ui Create Site under Scheme', async ({
   context,
@@ -19,15 +19,13 @@ test('@ui Create Site under Scheme', async ({
   makePortalLogin,
   schemes,
   sites,
+  api
 }) => {
   try {
     await test.step('Create scheme via API', async () => {
-      const created = await schemes.create({
-        display_name: schemeName,
-        description: 'Created for UI site test',
-        status_id: 79,
-      });
-
+      const payload = await makeSchemePayload(api);
+      schemeName = payload.display_name;
+      const created = await schemes.create(payload);
       createdSchemeId = created.id;
       expect(createdSchemeId).toBeDefined();
     });
