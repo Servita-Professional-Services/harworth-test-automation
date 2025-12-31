@@ -52,6 +52,9 @@ export class PortalSchemeDirectory {
   private get addSiteButton() {
     return this.page.getByRole('button', { name: 'Add Site' });
   }
+  private get schemeFilterListbox() {
+    return this.page.getByRole('listbox');
+  }
 
   // ---------------------------
   // Dialog-scoped locators
@@ -136,10 +139,6 @@ export class PortalSchemeDirectory {
   // ---------------------------
   // Filtering / Navigation
   // ---------------------------
-
-  private get schemeFilterListbox() {
-    return this.page.getByRole('listbox');
-  }
   
   async selectSchemeByName(name: string) {
     await this.schemeFilterTrigger.click();
