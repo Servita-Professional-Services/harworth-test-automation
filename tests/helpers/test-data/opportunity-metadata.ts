@@ -13,7 +13,6 @@ export function makeOpportunityMetadataUpdatePayload(args: {
   planningStatuses?: IdRow[];
   proposedUses?: IdRow[];
   planningTimeframes?: IdRow[];
-  // dealStructures?: IdRow[]; // REMOVED
   overrides?: Partial<Record<string, any>>;
 }) {
   const {
@@ -34,15 +33,10 @@ export function makeOpportunityMetadataUpdatePayload(args: {
     planning_status_id: safe(firstId(planningStatuses)),
     proposed_use_id: safe(firstId(proposedUses)),
     planning_timeframe_id: safe(firstId(planningTimeframes)),
-
     off_market: true,
     green_belt: false,
     data_centre_potential: 'no' as const,
     date_identified: isoNow(),
-
-    // REMOVED from API:
-    // deal_structure_id: safe(firstId(dealStructures)),
-    // target_purchase_date: isoNow(),
   };
 
   return { ...payload, ...overrides };
@@ -67,16 +61,5 @@ export function makeOpportunityMetadataNullPayload() {
     employment_density: null,
     housing_plots: null,
     housing_density: null,
-
-    // REMOVED from API:
-    // deal_structure_id: null,
-    // overage_percent: null,
-    // target_price: null,
-    // harworth_legal_costs: null,
-    // total_pre_acquisition_spend: null,
-    // bid_deadline: null,
-    // exclusivity_end_date: null,
-    // cash_requirement_on_completion: null,
-    // target_purchase_date: null,
   };
 }

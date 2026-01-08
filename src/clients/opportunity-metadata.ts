@@ -18,17 +18,6 @@ export type OpportunityMetadataUpdate = {
   employment_density?: number | null;
   housing_plots?: number | null;
   housing_density?: number | null;
-
-  // REMOVED from API:
-  // deal_structure_id?: number | null;
-  // overage_percent?: number | null;
-  // target_price?: number | null;
-  // harworth_legal_costs?: number | null;
-  // total_pre_acquisition_spend?: number | null;
-  // bid_deadline?: string | null;
-  // exclusivity_end_date?: string | null;
-  // cash_requirement_on_completion?: number | null;
-  // target_purchase_date?: string | null;
 };
 
 export class OpportunityMetadataClient {
@@ -40,13 +29,15 @@ export class OpportunityMetadataClient {
     return r.json();
   }
 
-  async update(
-    siteId: number | string,
-    payload: OpportunityMetadataUpdate,
-  ): Promise<Record<string, unknown>> {
+  async update(siteId: number | string, payload: OpportunityMetadataUpdate) {
     const r = await this.api.put(`/sites/${Number(siteId)}/opportunity-metadata`, { data: payload });
     await this.ensureOk(r, [200]);
     return r.json();
+  }
+
+  async delete(siteId: number | string): Promise<void> {
+    const r = await this.api.delete(`/sites/${Number(siteId)}/opportunity-metadata`);
+    await this.ensureOk(r, [200]);
   }
 
   private async ensureOk(res: APIResponse, ok: number[]) {

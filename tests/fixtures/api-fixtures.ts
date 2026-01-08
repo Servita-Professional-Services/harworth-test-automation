@@ -1,4 +1,4 @@
-import { test as base, request, APIRequestContext } from '@playwright/test';
+import { test as base, request, type APIRequestContext } from '@playwright/test';
 import { SitesClient } from '../../src/clients/sites';
 import { SchemesClient } from '../../src/clients/schemes';
 import { LookupsClient } from '../../src/clients/lookups';
@@ -11,7 +11,7 @@ type ApiFixtures = {
   schemes: SchemesClient;
   lookups: LookupsClient;
   landUnits: LandUnitsClient;
-  oppMeta: OpportunityMetadataClient;
+  opportunityMetadata: OpportunityMetadataClient;
 };
 
 const API_BASE_URL = process.env.QA_API_BASE_URL as string;
@@ -47,7 +47,7 @@ export const test = base.extend<ApiFixtures>({
     await use(new LandUnitsClient(api));
   },
 
-  oppMeta: async ({ api }, use) => {
+  opportunityMetadata: async ({ api }, use) => {
     await use(new OpportunityMetadataClient(api));
   },
 });
