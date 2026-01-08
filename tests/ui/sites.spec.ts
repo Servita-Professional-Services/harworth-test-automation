@@ -1,26 +1,30 @@
 import { test, expect } from '../fixtures/ui-fixtures';
 import { generateUniqueName } from '../helpers/generate-random-string';
 import { makeSchemePayload } from '../helpers/test-data/schemes';
+import { cleanupWithReport } from '../helpers/cleanup-helper';
 
 const email = process.env.QA_PORTAL_LOGIN_EMAIL as string;
 const password = process.env.QA_PORTAL_LOGIN_PASSWORD as string;
 
-const siteName = generateUniqueName(); 
-let createdSchemeId: number | string;
-let createdSiteId: number | string;
+const siteName = generateUniqueName();
+let createdSchemeId: number | string | undefined;
+let createdSiteId: number | string | undefined;
 let schemeName: string;
 
-test('@ui Create Site under Scheme', async ({
-  context,
-  portalWelcome,
-  portalNavbar,
-  portalSchemeDirectory,
-  portalSites,
-  makePortalLogin,
-  schemes,
-  sites,
-  api
-}) => {
+test('@ui Create Site under Scheme', async (
+  {
+    context,
+    portalWelcome,
+    portalNavbar,
+    portalSchemeDirectory,
+    portalSites,
+    makePortalLogin,
+    schemes,
+    sites,
+    api,
+  },
+  testInfo,
+) => {
   try {
     await test.step('Create scheme via API', async () => {
       const payload = await makeSchemePayload(api);
@@ -58,31 +62,43 @@ test('@ui Create Site under Scheme', async ({
       await portalSites.createSite({
         name: siteName,
         description: 'Test description',
-        });     
+      });
       await portalSites.assertSiteVisible(siteName);
-      const createdSiteId = await sites.getIdByDisplayName(siteName);      
+      createdSiteId = await sites.getIdByDisplayName(siteName);
       expect(createdSiteId).toBeDefined();
     });
 
     await test.step('Assert site is created/visible', async () => {
       await portalSites.assertSiteVisible(siteName);
     });
-
   } finally {
-    if (createdSiteId != null) {
-      await test.step(`Cleanup: delete site ${createdSiteId} via API`, async () => {
-        await sites.delete(createdSiteId);
-        const rows = await sites.listByIds([createdSiteId]);
-        expect(rows, `Site '${siteName}' should be deleted`).toHaveLength(0);
-      });
-    }
+    await test.step(`Cleanup: delete site ${createdSiteId} and scheme ${createdSchemeId} via API`, async () => {
+      await cleanupWithReport(testInfo, [
+        {
+          name: createdSiteId != null
+            ? `Delete site ${createdSiteId} via API`
+            : `Delete site (skipped - id unknown)`,
+          run: async () => {
+            if (createdSiteId == null) return;
 
-    if (createdSchemeId != null) {
-      await test.step(`Cleanup: delete scheme ${createdSchemeId} via API`, async () => {
-        await schemes.delete(createdSchemeId);
-        const rows = await schemes.listByIds([createdSchemeId]);
-        expect(rows, `Scheme '${schemeName}' should be deleted`).toHaveLength(0);
-      });
-    }
+            await sites.delete(createdSiteId);
+            const rows = await sites.listByIds([createdSiteId]);
+            expect(rows, `Site '${siteName}' should be deleted`).toHaveLength(0);
+          },
+        },
+        {
+          name: createdSchemeId != null
+            ? `Delete scheme ${createdSchemeId} via API`
+            : `Delete scheme (skipped - id unknown)`,
+          run: async () => {
+            if (createdSchemeId == null) return;
+
+            await schemes.delete(createdSchemeId);
+            const rows = await schemes.listByIds([createdSchemeId]);
+            expect(rows, `Scheme '${schemeName}' should be deleted`).toHaveLength(0);
+          },
+        },
+      ]);
+    });
   }
 });

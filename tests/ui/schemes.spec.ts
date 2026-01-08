@@ -1,20 +1,25 @@
 import { test, expect } from '../fixtures/ui-fixtures';
 import { generateUniqueName } from '../helpers/generate-random-string';
+import { cleanupWithReport } from '../helpers/cleanup-helper';
 
 const email = process.env.QA_PORTAL_LOGIN_EMAIL as string;
 const password = process.env.QA_PORTAL_LOGIN_PASSWORD as string;
+
 const schemeName = generateUniqueName();
 const schemeDescription = 'Testing';
-let createdSchemeId: string | number;
+let createdSchemeId: string | number | undefined;
 
-test('@ui Create and Update Scheme via Portal', async ({
-  context,
-  portalWelcome,
-  portalNavbar,
-  portalSchemeDirectory,
-  makePortalLogin,
-  schemes,
-}) => {
+test('@ui Create and Update Scheme via Portal', async (
+  {
+    context,
+    portalWelcome,
+    portalNavbar,
+    portalSchemeDirectory,
+    makePortalLogin,
+    schemes,
+  },
+  testInfo,
+) => {
   try {
     await test.step('Open Welcome page', async () => {
       await portalWelcome.open();
@@ -51,20 +56,26 @@ test('@ui Create and Update Scheme via Portal', async ({
       await portalSchemeDirectory.editSchemeDescription(editedDescription);
       await portalSchemeDirectory.assertSchemeDescription(editedDescription);
     });
-
   } finally {
-    if (createdSchemeId != null) {
-      await test.step(
-        `Cleanup: Delete scheme ${createdSchemeId} via API`,
-        async () => {
-          await schemes.delete(createdSchemeId);
-          const rows = await schemes.listByIds([createdSchemeId]);
-          expect(
-            rows,
-            `Scheme '${schemeName}' (id=${createdSchemeId}) should be deleted in cleanup`,
-          ).toHaveLength(0);
+    await test.step(`Cleanup: delete scheme ${createdSchemeId} via API`, async () => {
+      await cleanupWithReport(testInfo, [
+        {
+          name: createdSchemeId != null
+            ? `Delete scheme ${createdSchemeId} via API`
+            : `Delete scheme (skipped - id unknown)`,
+          run: async () => {
+            if (createdSchemeId == null) return;
+
+            await schemes.delete(createdSchemeId);
+            const rows = await schemes.listByIds([createdSchemeId]);
+
+            expect(
+              rows,
+              `Scheme '${schemeName}' (id=${createdSchemeId}) should be deleted in cleanup`,
+            ).toHaveLength(0);
+          },
         },
-      );
-    }
+      ]);
+    });
   }
 });
