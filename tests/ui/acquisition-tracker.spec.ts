@@ -1,10 +1,25 @@
-import { test, expect } from '../fixtures/ui-fixtures';
+import { test } from '../fixtures/ui-fixtures';
 import { generateUniqueName } from '../helpers/generate-random-string';
+import { cleanupWithReport } from '../helpers/cleanup-helper';
 
 test.describe('@ui Acquisition Tracker - Opportunities', () => {
-  test.beforeEach(async ({ loginToPortal, portalNavbar }) => {
+  test.beforeEach(async ({ context, portalWelcome, makePortalLogin, portalNavbar }) => {
+    const email = process.env.QA_PORTAL_LOGIN_EMAIL as string;
+    const password = process.env.QA_PORTAL_LOGIN_PASSWORD as string;
+
+    await test.step('Open Welcome page', async () => {
+      await portalWelcome.open();
+    });
+
+    const loginPage = await test.step('Open login popup', async () => {
+      return portalWelcome.clickSignInAndGetLoginPage(context);
+    });
+
+    const portalLogin = makePortalLogin(loginPage);
+
     await test.step('Login to Portal', async () => {
-      await loginToPortal();
+      await portalLogin.assertLoaded();
+      await portalLogin.login(email, password);
     });
 
     await test.step('Navigate to Acquisition Tracker', async () => {
@@ -12,97 +27,109 @@ test.describe('@ui Acquisition Tracker - Opportunities', () => {
     });
   });
 
-  test('@ui Shows validation errors when submitting empty form', async ({ portalAcquisitionTracker }) => {
-    await test.step('Open new opportunity form', async () => {
+  test('@ui Shows mandatory validation errors', async ({ portalAcquisitionTracker }) => {
+    await test.step('Open New Opportunity form', async () => {
       await portalAcquisitionTracker.openNewOpportunityForm();
     });
 
-    await test.step('Submit with no data', async () => {
-      await portalAcquisitionTracker.submitNewOpportunityForm();
-    });
-
-    await test.step('Assert mandatory validation errors', async () => {
-      await portalAcquisitionTracker.assertMandatoryErrorsVisible();
+    await test.step('Submit empty form and assert mandatory errors', async () => {
+      await portalAcquisitionTracker.submitEmptyOpportunityFormAndAssertErrors();
     });
   });
 
-  test('@sam Creates opportunity with mandatory fields only', async ({
-    portalAcquisitionTracker,
-    cleanupOpportunityById,
-    opportunityMetadata,
-  }) => {
-    const displayName = generateUniqueName('e2e');
-    let createdId: number | undefined;
+  test('@ui Creates opportunity with mandatory fields only', async (
+    { portalAcquisitionTracker, opportunityMetadata },
+    testInfo,
+  ) => {
+    const displayName = generateUniqueName('e2e-opportunity');
+    let createdOpportunityId: number | null = null;
 
     try {
-      await test.step('Create opportunity (mandatory fields only)', async () => {
-        await portalAcquisitionTracker.createOpportunity({
-          displayName,
-        });
+      await test.step('Open New Opportunity form', async () => {
+        await portalAcquisitionTracker.openNewOpportunityForm();
+      });
 
-        createdId = await portalAcquisitionTracker.readCurrentOpportunityId();
-        expect(createdId, 'created opportunity id should be a positive integer').toBeGreaterThan(0);
+      await test.step('Fill mandatory fields', async () => {
+        await portalAcquisitionTracker.fillMandatoryFields({ displayName });
+      });
+
+      await test.step('Save opportunity', async () => {
+        await portalAcquisitionTracker.submitNewOpportunityForm();
+      });
+
+      await test.step('Assert opportunity details page loaded', async () => {
+        await portalAcquisitionTracker.assertOpportunityDetailsPageLoaded(displayName);
+      });
+
+      await test.step('Capture created opportunity id from URL', async () => {
+        createdOpportunityId = await portalAcquisitionTracker.readOpportunityIdFromUrl();
+        await testInfo.attach('created-opportunity', {
+          body: `displayName=${displayName}\nid=${createdOpportunityId}`,
+          contentType: 'text/plain',
+        });
       });
     } finally {
-        const id = createdId;
-        if (id != null) {
-        await test.step(`Cleanup: delete opportunity metadata for ${createdId}`, async () => {
-          try {
-            await cleanupOpportunityById(id);
-            const meta = await opportunityMetadata.get(id).catch(() => ({}));
-            expect(
-              Object.keys(meta).length === 0 || JSON.stringify(meta) === '{}' ,
-              `opportunity metadata should be removed/empty after cleanup for site ${createdId}`,
-            ).toBeTruthy();
-          } catch (e) {
-            const msg = e instanceof Error ? e.stack ?? e.message : String(e);
-            console.error(`Cleanup failed for '${displayName}' (id=${createdId}): ${msg}`);
-          }
-        });
-      }
+      await test.step(`Cleanup: delete opportunity metadata via API for ID ${createdOpportunityId}`, async () => {
+        await cleanupWithReport(testInfo, [
+          {
+            name: `DELETE /sites/${createdOpportunityId}/opportunity-metadata`,
+            run: async () => {
+              if (createdOpportunityId == null) return;
+              await opportunityMetadata.delete(createdOpportunityId);
+            },
+          },
+        ]);
+      });
     }
   });
 
-  test('@ui Creates opportunity with all fields', async ({
-    portalAcquisitionTracker,
-    cleanupOpportunityById,
-    opportunityMetadata,
-  }) => {
-    const displayName = generateUniqueName('e2e');
-    let createdId: number | undefined;
+  test('@ui Creates opportunity with all fields populated', async (
+    { portalAcquisitionTracker, opportunityMetadata },
+    testInfo,
+  ) => {
+    const displayName = generateUniqueName('e2e-opportunity-all-fields');
+    let createdOpportunityId: number | null = null;
 
     try {
-      await test.step('Create opportunity (all fields)', async () => {
-        await portalAcquisitionTracker.createOpportunity({
-          displayName,
-          address: '1 Test Street',
-          postcode: 'S1 1AA',
-          comment: 'Automated test opportunity',
-          // landAssemblyName: 'Some scheme name',
-          // locationName: 'Some location',
-          // leadContactName: 'Some contact',
-        });
+      await test.step('Open New Opportunity form', async () => {
+        await portalAcquisitionTracker.openNewOpportunityForm();
+      });
 
-        createdId = await portalAcquisitionTracker.readCurrentOpportunityId();
-        expect(createdId, 'created opportunity id should be a positive integer').toBeGreaterThan(0);
+      await test.step('Fill mandatory fields', async () => {
+        await portalAcquisitionTracker.fillMandatoryFields({ displayName });
+      });
+
+      await test.step('Fill optional fields', async () => {
+        await portalAcquisitionTracker.fillOptionalFieldsWithTypeaheads();
+      });
+
+      await test.step('Save opportunity', async () => {
+        await portalAcquisitionTracker.submitNewOpportunityForm();
+      });
+
+      await test.step('Assert opportunity details page loaded', async () => {
+        await portalAcquisitionTracker.assertOpportunityDetailsPageLoaded(displayName);
+      });
+
+      await test.step('Capture created opportunity id from URL', async () => {
+        createdOpportunityId = await portalAcquisitionTracker.readOpportunityIdFromUrl();
+        await testInfo.attach('created-opportunity', {
+          body: `displayName=${displayName}\nid=${createdOpportunityId}`,
+          contentType: 'text/plain',
+        });
       });
     } finally {
-        const id = createdId;
-        if (id != null) {
-        await test.step(`Cleanup: delete opportunity metadata for ${createdId}`, async () => {
-          try {
-            await cleanupOpportunityById(id);
-            const meta = await opportunityMetadata.get(id).catch(() => ({}));
-            expect(
-              Object.keys(meta).length === 0 || JSON.stringify(meta) === '{}' ,
-              `opportunity metadata should be removed/empty after cleanup for site ${createdId}`,
-            ).toBeTruthy();
-          } catch (e) {
-            const msg = e instanceof Error ? e.stack ?? e.message : String(e);
-            console.error(`Cleanup failed for '${displayName}' (id=${createdId}): ${msg}`);
-          }
-        });
-      }
+      await test.step(`Cleanup: delete opportunity metadata via API for ID ${createdOpportunityId}`, async () => {
+        await cleanupWithReport(testInfo, [
+          {
+            name: `DELETE /sites/${createdOpportunityId}/opportunity-metadata`,
+            run: async () => {
+              if (createdOpportunityId == null) return;
+              await opportunityMetadata.delete(createdOpportunityId);
+            },
+          },
+        ]);
+      });
     }
   });
 });

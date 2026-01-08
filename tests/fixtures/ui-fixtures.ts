@@ -15,7 +15,6 @@ type UiFixtures = {
 
   makePortalLogin: (p: import('@playwright/test').Page) => PortalLogin;
   loginToPortal: () => Promise<void>;
-  cleanupOpportunityById: (siteId: number) => Promise<void>;
 };
 
 export const test = base.extend<UiFixtures>({
@@ -54,12 +53,6 @@ export const test = base.extend<UiFixtures>({
 
       await portalLogin.assertLoaded();
       await portalLogin.login(email, password);
-    });
-  },
-
-  cleanupOpportunityById: async ({ opportunityMetadata }, use) => {
-    await use(async (siteId: number) => {
-      await opportunityMetadata.delete(siteId);
     });
   },
 });
