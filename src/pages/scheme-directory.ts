@@ -40,6 +40,9 @@ export class PortalSchemeDirectory {
   private get schemeFilterInput() {
     return this.page.getByTestId('typeahead-input-scheme-filter');
   }
+  private get clearFilterButton() {
+    return this.page.getByRole('button', { name: 'Clear filter' });
+  }
   private get statusDropdown() {
     return this.page.getByTestId('scheme-status-select');
   }
@@ -111,8 +114,9 @@ export class PortalSchemeDirectory {
     const save = this.dialogSaveButton;
     await textarea.click();
     await textarea.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
-    await textarea.type(description);
-    await textarea.press('Tab');
+    await textarea.press('Backspace');
+    await textarea.type(description, { delay: 10 });
+    await this.descriptionDialog.getByText('Key Details').click({ force: true });
     await expect(textarea).toHaveValue(description);
     await save.click();
     await expect(this.descriptionDialog).toBeHidden({ timeout: 10_000 });
@@ -139,19 +143,24 @@ export class PortalSchemeDirectory {
   // ---------------------------
   // Filtering / Navigation
   // ---------------------------
-  
-  async selectSchemeByName(name: string) {
-    await this.schemeFilterTrigger.click();
-    await expect(this.schemeFilterInput).toBeVisible();
-    await this.schemeFilterInput.click();
-    await this.schemeFilterInput.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
-    await this.schemeFilterInput.press('Backspace');
-    await this.schemeFilterInput.type(name, { delay: 30 });
-    await expect(this.schemeFilterListbox).toBeVisible();
-    await expect(this.schemeOption(name)).toBeVisible({ timeout: 10_000 });
-    await this.schemeOption(name).click();
-      await expect(this.schemeFilterTrigger).toContainText(name);
+
+async selectSchemeByName(name: string) {
+  await this.schemeFilterTrigger.click();
+  await expect(this.schemeFilterInput).toBeVisible({ timeout: 10_000 });
+  if (await this.clearFilterButton.isVisible().catch(() => false)) {
+    await this.clearFilterButton.click();
+    await expect(this.schemeFilterInput).toBeVisible({ timeout: 10_000 });
   }
+  await this.schemeFilterInput.click();
+  await this.schemeFilterInput.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+  await this.schemeFilterInput.press('Backspace');
+  await this.schemeFilterInput.type(name, { delay: 30 });
+  const link = this.schemeLink(name);
+  await expect(link).toBeVisible({ timeout: 10_000 });
+  await expect(link).toHaveText(name);
+  await this.schemeFilterInput.press('Escape').catch(() => {});
+  await link.click();
+}
 
   async openScheme(name: string) {
     await this.schemeLink(name).click();

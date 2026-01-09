@@ -1,81 +1,126 @@
 import { test, expect } from '../fixtures/ui-fixtures';
 import { generateUniqueName } from '../helpers/generate-random-string';
+import { makeSchemePayload } from '../helpers/test-data/schemes';
 import { cleanupWithReport } from '../helpers/cleanup-helper';
 
-const email = process.env.QA_PORTAL_LOGIN_EMAIL as string;
-const password = process.env.QA_PORTAL_LOGIN_PASSWORD as string;
+test.describe('@ui Scheme Directory - Schemes', () => {
 
-const schemeName = generateUniqueName();
-const schemeDescription = 'Testing';
-let createdSchemeId: string | number | undefined;
+    test.beforeEach(async ({ loginToPortal, portalNavbar }) => {
+      await test.step('Login to Portal', async () => {
+        await loginToPortal();
+      });
+    
+      await test.step('Navigate to Scheme Directory', async () => {
+        await portalNavbar.navigateTo('scheme-directory');
+      });
+  });
 
-test('@ui Create and Update Scheme via Portal', async (
-  {
-    context,
-    portalWelcome,
-    portalNavbar,
-    portalSchemeDirectory,
-    makePortalLogin,
-    schemes,
-  },
-  testInfo,
-) => {
-  try {
-    await test.step('Open Welcome page', async () => {
-      await portalWelcome.open();
-    });
-
-    const loginPage = await test.step('Open login popup', async () => {
-      return portalWelcome.clickSignInAndGetLoginPage(context);
-    });
-
-    const portalLogin = makePortalLogin(loginPage);
-
-    await test.step('Login to Portal', async () => {
-      await portalLogin.assertLoaded();
-      await portalLogin.login(email!, password!);
-    });
-
-    await test.step('Navigate to Scheme Directory', async () => {
-      await portalNavbar.navigateTo('scheme-directory');
-    });
-
-    await test.step('Verify Scheme cannot be created if mandatory fields are empty', async () => {
+  test('@ui Shows mandatory validation errors when creating scheme', async ({ portalSchemeDirectory }) => {
+    await test.step('Open new scheme form', async () => {
       await portalSchemeDirectory.openNewSchemeForm();
+    });
+
+    await test.step('Submit empty form and assert required errors', async () => {
       await portalSchemeDirectory.submitSchemeForm();
       await portalSchemeDirectory.assertMandatoryFieldErrorsVisible();
     });
+  });
 
-    await test.step('Create Scheme via UI', async () => {
-      await portalSchemeDirectory.createScheme(schemeName, schemeDescription);
-      createdSchemeId = await schemes.getIdByDisplayName(schemeName);
-    });
+  test('@ui Creates scheme via UI', async (
+    { portalSchemeDirectory, schemes },
+    testInfo,
+  ) => {
+    const schemeName = generateUniqueName('e2e-scheme');
+    const schemeDescription = 'Testing';
+    let createdSchemeId: string | number | undefined;
 
-    await test.step('Edit scheme description and verify new value is saved', async () => {
-      const editedDescription = schemeDescription + ' Edited';
-      await portalSchemeDirectory.editSchemeDescription(editedDescription);
-      await portalSchemeDirectory.assertSchemeDescription(editedDescription);
-    });
-  } finally {
-    await test.step(`Cleanup: delete scheme ${createdSchemeId} via API`, async () => {
-      await cleanupWithReport(testInfo, [
-        {
-          name: createdSchemeId != null
-            ? `Delete scheme ${createdSchemeId} via API`
-            : `Delete scheme (skipped - id unknown)`,
-          run: async () => {
-            if (createdSchemeId == null) return;
+    try {
+      await test.step('Create scheme via UI', async () => {
+        await portalSchemeDirectory.createScheme(schemeName, schemeDescription);
+      });
 
-            await schemes.delete(createdSchemeId);
-            const rows = await schemes.listByIds([createdSchemeId]);
+      await test.step('Capture created scheme id via API', async () => {
+        createdSchemeId = await schemes.getIdByDisplayName(schemeName);
+        await testInfo.attach('created-scheme', {
+          body: `displayName=${schemeName}\nid=${createdSchemeId}`,
+          contentType: 'text/plain',
+        });
+      });
+    } finally {
+      await test.step(`Cleanup: delete scheme ${createdSchemeId} via API`, async () => {
+        await cleanupWithReport(testInfo, [
+          {
+            name:
+              createdSchemeId != null
+                ? `Delete scheme ${createdSchemeId} via API`
+                : 'Delete scheme (skipped - id unknown)',
+            run: async () => {
+              if (createdSchemeId == null) return;
 
-            expect(
-              rows,
-              `Scheme '${schemeName}' (id=${createdSchemeId}) should be deleted in cleanup`,
-            ).toHaveLength(0);
+              await schemes.delete(createdSchemeId);
+              const rows = await schemes.listByIds([createdSchemeId]);
+              expect(
+                rows,
+                `Scheme '${schemeName}' (id=${createdSchemeId}) should be deleted in cleanup`,
+              ).toHaveLength(0);
+            },
           },
-        },
-      ]);
-    });
-  }
+        ]);
+      });
+    }
+  });
+
+  test('@ui Edits scheme description via UI', async (
+    { portalSchemeDirectory, schemes, api },
+    testInfo,
+  ) => {
+    const schemePayload = await makeSchemePayload(api);
+    const schemeName = schemePayload.display_name;
+    const editSchemeDescription = 'Testing Edited.';
+    let createdSchemeId: string | number | undefined;
+
+    try {
+      await test.step('Create scheme via API (setup)', async () => {
+        const created = await schemes.create(schemePayload);
+        createdSchemeId = created.id;
+        expect(createdSchemeId).toBeDefined();
+
+        await testInfo.attach('created-scheme', {
+          body: `displayName=${schemeName}\nid=${createdSchemeId}`,
+          contentType: 'text/plain',
+        });
+      });
+
+      await test.step('Open scheme in UI', async () => {
+        await portalSchemeDirectory.selectSchemeByName(schemeName);
+        await portalSchemeDirectory.openScheme(schemeName);
+      });
+
+      await test.step('Edit description and verify saved value', async () => {
+        await portalSchemeDirectory.editSchemeDescription(editSchemeDescription);
+        await portalSchemeDirectory.assertSchemeDescription(editSchemeDescription);
+      });
+    } finally {
+      await test.step(`Cleanup: delete scheme ${createdSchemeId} via API`, async () => {
+        await cleanupWithReport(testInfo, [
+          {
+            name:
+              createdSchemeId != null
+                ? `Delete scheme ${createdSchemeId} via API`
+                : 'Delete scheme (skipped - id unknown)',
+            run: async () => {
+              if (createdSchemeId == null) return;
+
+              await schemes.delete(createdSchemeId);
+              const rows = await schemes.listByIds([createdSchemeId]);
+              expect(
+                rows,
+                `Scheme '${schemeName}' (id=${createdSchemeId}) should be deleted in cleanup`,
+              ).toHaveLength(0);
+            },
+          },
+        ]);
+      });
+    }
+  });
 });
